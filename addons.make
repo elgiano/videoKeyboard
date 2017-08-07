@@ -1,0 +1,4 @@
+ofxMidi
+ofxHapPlayer
+ofxJsonSettings
+ofxJSON
