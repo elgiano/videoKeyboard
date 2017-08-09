@@ -10,6 +10,9 @@
 
 //--------------------------------------------------------------
 void ofApp::setup(){
+    
+    ofSetLogLevel(OF_LOG_VERBOSE);
+    
   screenW = ofGetScreenWidth();
   screenH = ofGetScreenHeight();
 
@@ -25,6 +28,7 @@ void ofApp::setup(){
 
   ofBackground(0,0,0);
   ofEnableAlphaBlending();
+    
 
 
 }
@@ -46,7 +50,8 @@ void ofApp::scanDataDir(){
   }
 
   // subdirs
-  dir.allowExt("");
+  //ofDirectory dir(ofToDataPath(""));
+    dir.allowExt("");
   dir.listDir();
   dir.sort();
 
@@ -76,11 +81,14 @@ void ofApp::loadConfig(string path){
       if(Settings::get().exists("general/first_midinote")){
         first_midinote=Settings::getInt("general/first_midinote");
       }
+      if(Settings::get().exists("general/midi_port")){
+          midi_port=Settings::getInt("general/midi_port");
+      }
       if(Settings::get().exists("general/fade_in")){
-        fade_in=Settings::getInt("general/fade_in");
+        fade_in=Settings::getFloat("general/fade_in");
       }
       if(Settings::get().exists("general/fade_out")){
-        fade_out=Settings::getInt("general/fade_out");
+        fade_out=Settings::getFloat("general/fade_out");
       }
       if(Settings::get().exists("general/blending_multiply")){
          blending_multiply=Settings::getBool("general/blending_multiply");
@@ -116,6 +124,7 @@ void ofApp::loadConfig(string path){
 void ofApp::loadDefaultConfig(){
   cout << "default conf" << endl;
   first_midinote = 21;
+  midi_port = 1;
   fade_in = 0.01;
   fade_out = 0.1;
   blending_multiply = false;
@@ -125,10 +134,10 @@ void ofApp::loadDefaultConfig(){
 
   layoutConf = new int*[n_folders];
 
-  layoutConf[0] = new int[n_folders]{0,1,0,0};
-  layoutConf[1] = new int[n_folders]{1,0,1,1};
-  layoutConf[2] = new int[n_folders]{0,1,2,2};
-  layoutConf[3] = new int[n_folders]{1,0,3,3};
+  layoutConf[0] = new int[N_LAYOUTS]{0,1,0,0,0};
+  layoutConf[1] = new int[N_LAYOUTS]{1,0,1,1,1};
+  layoutConf[2] = new int[N_LAYOUTS]{0,1,2,2,2};
+  layoutConf[3] = new int[N_LAYOUTS]{1,0,3,1,3};
 }
 
 // ## load videos ##
@@ -140,6 +149,7 @@ void ofApp::initVideoVariables(int key){
   fo_start[key] = 0;
   dyn[key] = 1;
   startPos[key] = 0;
+  movie[key].setLoopState(OF_LOOP_NORMAL);
 }
 
 void ofApp::loadDataDir(){
@@ -220,20 +230,23 @@ void ofApp::loadRandom(){
 void ofApp::drawVideoInLayout(int movieN){
   float w = movie[movieN].getWidth();
   float h = movie[movieN].getHeight();
-  // fade in
-  float p = movie[movieN].getPosition()*movie[movieN].getDuration();
-  if(fade_in>0){p = p/fade_in;p = p <= 0 ? 0 : p >= 1 ? 1 : p;}else{p=1;}
-  // fade out
-  float fo_trans = 1;
-  if(fo_start[movieN] > 0){
-    fo_trans =ofGetElapsedTimef()-fo_start[movieN];
-    if(fo_trans>fade_out){deactivateVideo(movieN);fo_trans = 0;}
-    else{
-      if(fade_out>0){
-        fo_trans = 1-(fo_trans/fade_out);
-        fo_trans = fo_trans <= 0 ? 0 : fo_trans >= 1 ? 1 : fo_trans;
-      }
+  float fi_alpha = 1;
+    // fade in
+    if(fade_in>0){
+        fi_alpha = (movie[movieN].getPosition()-startPos[movieN])*movie[movieN].getDuration();
+        fi_alpha = fi_alpha/fade_in;fi_alpha = fi_alpha <= 0 ? 0 : fi_alpha >= 1 ? 1 : fi_alpha;
     }
+    // fade out
+    ofLogVerbose() << "fo " << ofToString(fo_start[movieN]);
+    float fo_alpha = 1;
+    if(fo_start[movieN] > 0 && fade_out>0){
+      fo_alpha = ofGetElapsedTimef()-fo_start[movieN];
+      
+      if(fo_alpha>=fade_out){deactivateVideo(movieN);fo_start[movieN] = 0.0;return;}
+   
+      fo_alpha = 1-(fo_alpha/fade_out);
+      fo_alpha = fo_alpha <= 0 ? 0 : fo_alpha >= 1 ? 1 : fo_alpha;
+      
   }
 
 
@@ -258,12 +271,15 @@ void ofApp::drawVideoInLayout(int movieN){
       ofEnableBlendMode(OF_BLENDMODE_MULTIPLY);
       //cout << ofToString(thisLayoutInit[layoutPos])<< " pos"<< ofToString(layoutPos) << endl;
     }
-    //ofSetColor(255,255,255,255/p*fo_trans);
+    ofSetColor(255,255,255,255*fi_alpha*fo_alpha*dyn[movieN]);
   }else{
     // alpha blending:
     // logarithmic layering * fade_in_transparency * fade_out_transparency * dynamic level
-    ofSetColor(255,255,255,255/log2(layoutCount[abs(layout)][layoutPos]+2)*p*fo_trans);
+    ofSetColor(255,255,255,255/log2(layoutCount[abs(layout)][layoutPos]+2)*fi_alpha*fo_alpha*dyn[movieN]);
   }
+
+  ofLogVerbose() << "layout count " << ofToString(layoutCount[abs(layout)][layoutPos]) ;
+ ofLogVerbose() << "fi/fo " << ofToString(fi_alpha) << "/" <<  ofToString(fo_alpha);
 
 
   switch(abs(layout)){
@@ -289,6 +305,10 @@ void ofApp::drawVideoInLayout(int movieN){
         };
       break;
     case 4:
+    //triptych
+          movie[movieN].getTexture()->drawSubsection(screenW/3*layoutPos,0,screenW/3,screenH,((screenH*w/h)-(screenW/3))*w/screenW/3,0,w*(1-((screenH*w/h)-(screenW/3))/screenW),h);
+          break;
+    case 5:
       // split in 4
       movie[movieN].draw(screenW/2*(layoutPos%2),
                         (screenH/2*(layoutPos/2%2))+(screenH/2-(screenW/2*h/w))/2,
@@ -317,8 +337,11 @@ void ofApp::draw(){
 
   // draw videos
   for(int i=0;i<MAX_VIDEOS;i++){
-    if(/*movie[i].isPlaying()*/active_videos[i]){
+    if(active_videos[i]){
+      //ofLogVerbose() << "drawing " + ofToString(i);
       drawVideoInLayout(i);
+      //ofLogVerbose() << "drawn " + ofToString(i);
+
     }
   }
 }
@@ -327,8 +350,16 @@ void ofApp::draw(){
 void ofApp::update(){
   for(int i=0;i<MAX_VIDEOS;i++){
     if(active_videos[i]){
-      movie[i].update();
-    }
+        if(!movie[i].isPlaying()){
+            movie[i].setSpeed(speed*tapSpeed[i]);
+            movie[i].setPosition(startPos[i]);
+            movie[i].play();
+        }else{
+            movie[i].setSpeed(speed*tapSpeed[i]);
+            movie[i].update();
+            //ofLogVerbose() << "updated "+ofToString(i)+ofToString(active_videos[i]);
+        }
+    }else if(movie[i].isPlaying()){movie[i].stop();}
   }
 }
 
@@ -344,18 +375,19 @@ void ofApp::panic(){
 
 void ofApp::playVideo(int key, float vel){
   key = key % n_videos;
+  //ofLog(OF_LOG_VERBOSE,"starting video " + ofToString(key));
   if(key>=0 && key < MAX_VIDEOS){
-    if(active_videos[key]==false){
-      movie[key].setSpeed(speed);
-      movie[key].setPosition(startPos[key]);
-      movie[key].play();
-      active_videos[key] = true;
-      dyn[key] = vel;
-      n_activeVideos++;
-    }else if(active_videos[key] && sustain>0){
+    // update dynamics and stop fade_out
+    dyn[key] = vel;
+    fo_start[key] = 0;
+      
+      if(!active_videos[key]){
+          active_videos[key] = true;
+          n_activeVideos++;
+      }else if(sustain>0){
       // if video is already active and sustain is on (tapping)
       float now = ofGetElapsedTimef();
-      movie[key].setSpeed(speed*tapToSpeed(now-tapTempo[key],key));
+      tapToSpeed(now-tapTempo[key],key);
       tapTempo[key] = now;
     }
     sustained_videos[key] = false;
@@ -363,33 +395,40 @@ void ofApp::playVideo(int key, float vel){
 }
 
 void ofApp::deactivateVideo(int key){
+  fo_start[key] = 0.0;
   active_videos[key] = false;
-  fo_start[key] = 0;
-  movie[key].stop();
+
+  // now the actual stop method is called by update()
+  //movie[key].stop();
+  
   n_activeVideos--;
 }
 void ofApp::stopVideo(int key){
   key = key % n_videos;
+  ofLog(OF_LOG_VERBOSE, "stopping video " + ofToString(key));
+
   if(key>=0 && key < MAX_VIDEOS){
-    if(active_videos[key]){
+    //if(active_videos[key]){
       if(sustain==0){
         fo_start[key] = ofGetElapsedTimef();
-        //deactivateVideo(key);
+       // deactivateVideo(key);
+          ofLog(OF_LOG_VERBOSE, "stopped video " + ofToString(key));
+
       }else{
         sustained_videos[key] = true;
       }
-    }
+    //}
   }
 }
 
 void ofApp::changeAllSpeed(float control){
   float scaled =pow(3,2*control-1);
   speed = scaled;
-  for(int i=0;i<MAX_VIDEOS;i++){
+  /*for(int i=0;i<MAX_VIDEOS;i++){
     if(active_videos[i]){
       movie[i].setSpeed(scaled*tapSpeed[i]);
     };
-  };
+  };*/
   //cout << "scaled: "<< ofToString(scaled) << endl;
 }
 
@@ -404,6 +443,7 @@ float ofApp::tapToSpeed(float t,int k){
 };
 
 void ofApp::stopSustain(){
+    for(int i=0;i<MAX_VIDEOS;i++){tapSpeed[i]=1.0;};
   for(int i=0;i<MAX_VIDEOS;i++){
     if(sustained_videos[i]){
       stopVideo(i);
@@ -415,20 +455,22 @@ void ofApp::stopSustain(){
 // ### INPUT ####
 
 void ofApp::setupMidi(){
-  ofSetVerticalSync(true);
-  midiIn.openPort(1);
+  //ofSetVerticalSync(true);
+  midiIn.openPort(midi_port);
   midiIn.addListener(this);
 }
 
 //--------------------------------------------------------------
 void ofApp::newMidiMessage(ofxMidiMessage& msg) {
+    
+    ofLogVerbose() << ofToString(msg.deltatime) << " ) " << msg.getStatusString(msg.status) << " " <<ofToString(((int)msg.pitch)) << " " << ofToString(msg.velocity) << " " << ofToString(msg.control) << " " << ofToString(msg.value);
 
 	// make a copy of the latest message
 	// midiMessage = msg;
   switch(msg.status) {
     case MIDI_NOTE_ON :
       if(msg.velocity>0){
-        playVideo(msg.pitch-first_midinote,msg.velocity);
+        playVideo(msg.pitch-first_midinote,(float) msg.velocity/127);
         break;
       }
     case MIDI_NOTE_OFF:
@@ -438,14 +480,14 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
       changeAllSpeed((float) msg.value/16383);
       break;
     case MIDI_CONTROL_CHANGE:
-      layout = round(msg.value/(127/8))-4;
+      layout = round(msg.value/(127/N_LAYOUTS/2))-N_LAYOUTS;
       break;
     default:
       cout << ofToString(msg.deltatime) << " ) " << msg.getStatusString(msg.status) << " " <<ofToString(((int)msg.pitch)-21) << " " << ofToString(msg.control) << " " << ofToString(msg.value) << endl;
       break;
     };
 
-	cout << ofToString(msg.deltatime) << " ) " << msg.getStatusString(msg.status) << " " <<ofToString(((int)msg.pitch)-21) << " " << ofToString(msg.control) << " " << ofToString(msg.value) << endl;
+	
 }
 
 //--------------------------------------------------------------
