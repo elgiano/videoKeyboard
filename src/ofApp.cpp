@@ -18,7 +18,9 @@ void ofApp::setup(){
 
   speed = 1.0;
   layout = 0;
-
+    
+  n_captures = 0;
+    
   scanDataDir();
   //loadDataDir();
   //loadFolders();
@@ -31,6 +33,36 @@ void ofApp::setup(){
     
 
 
+}
+
+// ####### CAPTURE  #########
+
+void ofApp::initCapture(){
+    for(int i=0;i<n_captures; i++){
+        capture[i].setDeviceID(capture_sources[i]);
+        capture[i].setDesiredFrameRate(60);
+        capture[i].initGrabber(screenW,screenH);
+    }
+}
+
+ofVideoGrabber ofApp::captureFromKey(int key){
+
+    int *found;
+
+    found = std::find(capture_keys,capture_keys+MAX_CAPTURE,key);
+    if(found != capture_keys+MAX_CAPTURE){
+        key = std::distance(capture_keys,found);
+        return capture[key];
+    }
+}
+
+bool ofApp::isCaptureKey (int key){
+    
+    return std::any_of(std::begin(capture_keys), std::end(capture_keys), [&](int i)
+    {
+        cout << ofToString(key)<< endl;
+        return i == key && i>=0;
+    });
 }
 
 // ####### DATA DIR #########
@@ -118,6 +150,23 @@ void ofApp::loadConfig(string path){
     }
 
   }
+    
+    if(Settings::get().exists("capture")){
+        // count folders, init layoutConf
+        n_captures = 0;
+        while(Settings::get().exists("capture/"+std::to_string(n_captures))){
+            capture_sources[n_captures] = Settings::getInt("capture/"+ofToString(n_captures));
+            if(Settings::get().exists("capture/layout/"+std::to_string(n_captures))){
+                capture_layouts[n_captures] =  Settings::getInt("capture/layout/"+ofToString(n_captures));
+            }
+            
+            cout << "capture #" << ofToString(n_captures) << " device:" << ofToString(capture_sources[n_captures]) << endl;
+            
+            n_captures++;
+        }
+        initCapture();
+    }
+
 
 }
 
@@ -138,6 +187,9 @@ void ofApp::loadDefaultConfig(){
   layoutConf[1] = new int[N_LAYOUTS]{1,0,1,1,1};
   layoutConf[2] = new int[N_LAYOUTS]{0,1,2,2,2};
   layoutConf[3] = new int[N_LAYOUTS]{1,0,3,1,3};
+    
+  n_captures = 0;
+    for(int i =0; i< MAX_CAPTURE; i++){capture_keys[i] = -1;}
 }
 
 // ## load videos ##
@@ -185,6 +237,21 @@ void ofApp::loadFolders(){
     subdir.listDir();
     subdir.sort();
     int tot_videos = subdir.size();
+      if(tot_videos==0){
+          // empty subfolder, assume capture
+          for(int k=0; k<n_captures; k++){
+              capture_keys[k] = n_videos;
+              initVideoVariables(n_videos);
+              folders[n_videos] = capture_layouts[k];
+              
+              cout << "Placing capture #"<< ofToString(k) <<"at key " << ofToString(n_videos)  << endl;
+              
+              n_videos++;
+              
+          }
+      
+      }else{
+          // load all videos in subfolder
     for(int k=0;k<tot_videos;k++){
       movie[n_videos].load(subdir.getPath(k));
       initVideoVariables(n_videos);
@@ -194,6 +261,7 @@ void ofApp::loadFolders(){
 
       cout << "Preloading " << n_videos  <<" "<< dir.getPath(i%n_videos) << endl;
     }
+      }
     n_dirs++;
   }
 
@@ -237,7 +305,7 @@ void ofApp::drawVideoInLayout(int movieN){
         fi_alpha = fi_alpha/fade_in;fi_alpha = fi_alpha <= 0 ? 0 : fi_alpha >= 1 ? 1 : fi_alpha;
     }
     // fade out
-    ofLogVerbose() << "fo " << ofToString(fo_start[movieN]);
+    //ofLogVerbose() << "fo " << ofToString(fo_start[movieN]);
     float fo_alpha = 1;
     if(fo_start[movieN] > 0 && fade_out>0){
       fo_alpha = ofGetElapsedTimef()-fo_start[movieN];
@@ -278,39 +346,54 @@ void ofApp::drawVideoInLayout(int movieN){
     ofSetColor(255,255,255,255/log2(layoutCount[abs(layout)][layoutPos]+2)*fi_alpha*fo_alpha*dyn[movieN]);
   }
 
-  ofLogVerbose() << "layout count " << ofToString(layoutCount[abs(layout)][layoutPos]) ;
+  //ofLogVerbose() << "layout count " << ofToString(layoutCount[abs(layout)][layoutPos]) ;
  ofLogVerbose() << "fi/fo " << ofToString(fi_alpha) << "/" <<  ofToString(fo_alpha);
 
+    
+    ofTexture thisTexture;
+    if(isCaptureKey(movieN)){
+        thisTexture.loadData(captureFromKey(movieN).getPixels());
+        w = captureFromKey(movieN).getWidth();
+        h = captureFromKey(movieN).getHeight();
+    }else{
+        thisTexture = *movie[movieN].getTexture();
+        w = movie[movieN].getWidth();
+        h = movie[movieN].getHeight();
+    }
 
   switch(abs(layout)){
     case 0:
-      movie[movieN].draw(0,(screenH-(screenW*h/w))/2, screenW, screenW*h/w);
+      thisTexture.draw(0,(screenH-(screenW*h/w))/2, screenW, screenW*h/w);
       break;
     case 1:
       // Split screen vertical
       //movie[movieN].draw(screenW/2*layoutPos,(screenH-(screenW/2*h/w))/2, screenW/2, screenW/2*h/w);
-      movie[movieN].getTexture()->drawSubsection(screenW/2*layoutPos,0,screenW/2,screenH,((screenH*w/h)-(screenW/2))*w/screenW/2,0,w*(1-((screenH*w/h)-(screenW/2))/screenW),h);
+     thisTexture.drawSubsection(screenW/2*layoutPos,0,screenW/2,screenH,((screenH*w/h)-(screenW/2))*w/screenW/2,0,w*(1-((screenH*w/h)-(screenW/2))/screenW),h);
       break;
     case 2:
       // Split screen horizontal
       //movie[movieN].draw((screenW-(screenH/2*w/h))/2,screenH/2*layoutPos, screenH/2*w/h, screenH/2);
-      movie[movieN].getTexture()->drawSubsection(0,screenH/2*layoutPos,screenW,screenH/2,0,((screenW*h/w)-(screenH/2))*h/screenH/2,w,h*(1-((screenW*h/w)-(screenH/2))/screenH));
+      thisTexture.drawSubsection(0,screenH/2*layoutPos,screenW,screenH/2,0,((screenW*h/w)-(screenH/2))*h/screenH/2,w,h*(1-((screenW*h/w)-(screenH/2))/screenH));
       break;
     case 3:
       // Split screen vertical and horizontal once
         if (layoutPos<2) {
-          movie[movieN].draw(screenW/2*layoutPos,(screenH/2-(screenW/2*h/w))/2+(layout>0?0:screenH/2), screenW/2, screenW/2*h/w);
+          thisTexture.draw(screenW/2*layoutPos,(screenH/2-(screenW/2*h/w))/2+(layout>0?0:screenH/2), screenW/2, screenW/2*h/w);
         }else{
-          movie[movieN].getTexture()->drawSubsection(0,(layout>0?screenH/2:0),screenW,screenH/2,0,((screenW*h/w)-(screenH/2))*h/screenH/2,w,h*(1-((screenW*h/w)-(screenH/2))/screenH));
+          thisTexture.drawSubsection(0,(layout>0?screenH/2:0),screenW,screenH/2,0,((screenW*h/w)-(screenH/2))*h/screenH/2,w,h*(1-((screenW*h/w)-(screenH/2))/screenH));
         };
       break;
     case 4:
     //triptych
-          movie[movieN].getTexture()->drawSubsection(screenW/3*layoutPos,0,screenW/3,screenH,((screenH*w/h)-(screenW/3))*w/screenW/3,0,w*(1-((screenH*w/h)-(screenW/3))/screenW),h);
+          // x0,y0,w,h,
+          // sx0,sy0, sw,sh
+          thisTexture.drawSubsection(screenW/3*layoutPos,0,screenW/3,screenH,
+                w/3,0,w/3,h
+          );
           break;
     case 5:
       // split in 4
-      movie[movieN].draw(screenW/2*(layoutPos%2),
+      thisTexture.draw(screenW/2*(layoutPos%2),
                         (screenH/2*(layoutPos/2%2))+(screenH/2-(screenW/2*h/w))/2,
                         screenW/2, screenW/2*h/w);
 
@@ -355,8 +438,12 @@ void ofApp::update(){
             movie[i].setPosition(startPos[i]);
             movie[i].play();
         }else{
-            movie[i].setSpeed(speed*tapSpeed[i]);
-            movie[i].update();
+            if(isCaptureKey(i)){
+                captureFromKey(i).update();
+            }else{
+              movie[i].setSpeed(speed*tapSpeed[i]);
+              movie[i].update();
+            }
             //ofLogVerbose() << "updated "+ofToString(i)+ofToString(active_videos[i]);
         }
     }else if(movie[i].isPlaying()){movie[i].stop();}
@@ -409,10 +496,11 @@ void ofApp::stopVideo(int key){
 
   if(key>=0 && key < MAX_VIDEOS){
     //if(active_videos[key]){
-      if(sustain==0){
+      if(sustain==0 and !sostenuto_videos[key]){
+        // videos get deactivated by draw function when fade out is over
         fo_start[key] = ofGetElapsedTimef();
-       // deactivateVideo(key);
-          ofLog(OF_LOG_VERBOSE, "stopped video " + ofToString(key));
+        // deactivateVideo(key);
+        ofLog(OF_LOG_VERBOSE, "stopped video " + ofToString(key));
 
       }else{
         sustained_videos[key] = true;
@@ -452,6 +540,22 @@ void ofApp::stopSustain(){
   }
 }
 
+void ofApp::startSostenuto(){
+    sostenuto = 1;
+    memcpy(sostenuto_videos,active_videos,MAX_VIDEOS);
+}
+
+void ofApp::stopSostenuto(){
+    sostenuto = 0;
+    for(int i=0;i<MAX_VIDEOS;i++){
+        if(sostenuto_videos[i]){
+            sostenuto_videos[i] = false;
+            stopVideo(i);
+            
+        }
+    };
+}
+
 // ### INPUT ####
 
 void ofApp::setupMidi(){
@@ -480,7 +584,21 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
       changeAllSpeed((float) msg.value/16383);
       break;
     case MIDI_CONTROL_CHANGE:
-      layout = round(msg.value/(127/N_LAYOUTS/2))-N_LAYOUTS;
+          switch(msg.control){
+              case 1:
+                  layout = round(msg.value/(127/N_LAYOUTS/2))-N_LAYOUTS;
+                  break;
+              case 63:
+                  sustain = (127-msg.value)/127;
+                  if(sustain==0){stopSustain();}
+                  break;
+              case 64:
+                  sostenuto = (127-msg.value)/127;
+                  if(sostenuto==0){stopSostenuto();}
+                  if(sostenuto==1){startSostenuto();}
+                  break;
+          }
+      
       break;
     default:
       cout << ofToString(msg.deltatime) << " ) " << msg.getStatusString(msg.status) << " " <<ofToString(((int)msg.pitch)-21) << " " << ofToString(msg.control) << " " << ofToString(msg.value) << endl;

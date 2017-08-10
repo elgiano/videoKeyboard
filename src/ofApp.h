@@ -7,6 +7,7 @@
 #include "ofxHapPlayer.h"
 
 #define MAX_VIDEOS 88
+#define MAX_CAPTURE 2
 #define N_LAYOUTS 5
 #define MAX_LAYOUTPOS 4
 
@@ -30,10 +31,24 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		void newMidiMessage(ofxMidiMessage& eventArgs);
 		ofxMidiIn midiIn;
 		void setupMidi();
+    
+        ofVideoGrabber capture[MAX_CAPTURE];
+        int n_captures;
+        int capture_sources[MAX_CAPTURE] = {0};
+        int capture_keys[MAX_CAPTURE];
+        int capture_layouts[MAX_CAPTURE];
+
+        void initCapture();
+        bool isCaptureKey( int key);
+        ofVideoGrabber captureFromKey( int key );
+    
 
 		void setup();
 		void update();
 		void draw();
+    
+        void drawVideoInLayout(int movieN);
+
 
 		void scanDataDir();
 		void initVideoVariables(int key);
@@ -43,9 +58,6 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		void loadFolders();
 		void loadRandom();
 
-		void drawVideoInLayout(int movieN);
-		//void drawDiff(int movieN);
-
 
 		void playVideo(int key, float vel);
 		void deactivateVideo(int key);
@@ -54,7 +66,9 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		float tapToSpeed(float t, int k);
 
 		void stopSustain();
-		void panic();
+        void startSostenuto();
+        void stopSostenuto();
+        void panic();
 
 		void keyPressed(int key);
 		void keyReleased(int key);
@@ -73,10 +87,13 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 
 		float speed; // global
 		float sustain;
+        float sostenuto;
 
 		bool active_videos[MAX_VIDEOS];
 
 		bool sustained_videos[MAX_VIDEOS];
+        bool sostenuto_videos[MAX_VIDEOS];
+
 		float fo_start[MAX_VIDEOS];
 
 		float tapTempo[MAX_VIDEOS];
