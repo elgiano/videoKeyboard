@@ -1,5 +1,5 @@
 #!/bin/python
-#/home/giano/projects/soren/videoKeyboardHap/bin/sets
+#/Users/sorenkjaergard/Documents/openFrameworks/apps/myApps/videoKeyboard-master/bin/sets
 
 from os import listdir, mkdir, symlink, remove, rename
 from os.path import isdir, isfile, join, getsize, abspath, isabs,realpath
@@ -188,8 +188,9 @@ class MyWindow(Gtk.Window):
 
     def loadLastSetDir(self):
         f = open(abspath(__file__),"r")
-        next(f)
-        return (f.readline()[1:].strip())
+        line = f.readlines()[1][1:].strip()
+        f.close()
+        return (line)
 
     def saveSetDir(self):
         with open(abspath(__file__),"r") as f:
