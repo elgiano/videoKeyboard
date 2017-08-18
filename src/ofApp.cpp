@@ -307,7 +307,9 @@ void ofApp::drawVideoInLayout(int movieN){
     // fade out
     //ofLogVerbose() << "fo " << ofToString(fo_start[movieN]);
     float fo_alpha = 1;
-    if(fo_start[movieN] > 0 && fade_out>0){
+    if(fade_out==0 && fo_start[movieN] > 0){
+        {deactivateVideo(movieN);fo_start[movieN] = 0.0;return;}
+    }else if(fo_start[movieN] > 0 && fade_out>0){
       fo_alpha = ofGetElapsedTimef()-fo_start[movieN];
       
       if(fo_alpha>=fade_out){deactivateVideo(movieN);fo_start[movieN] = 0.0;return;}
@@ -315,7 +317,7 @@ void ofApp::drawVideoInLayout(int movieN){
       fo_alpha = 1-(fo_alpha/fade_out);
       fo_alpha = fo_alpha <= 0 ? 0 : fo_alpha >= 1 ? 1 : fo_alpha;
       
-  }
+   }
 
 
   int layoutPos=0;
@@ -484,6 +486,7 @@ void ofApp::playVideo(int key, float vel){
 void ofApp::deactivateVideo(int key){
   fo_start[key] = 0.0;
   active_videos[key] = false;
+  cout << "deactivating " << ofToString(key) << endl;
 
   // now the actual stop method is called by update()
   //movie[key].stop();
@@ -496,6 +499,7 @@ void ofApp::stopVideo(int key){
 
   if(key>=0 && key < MAX_VIDEOS){
     //if(active_videos[key]){
+      
       if(sustain==0 and !sostenuto_videos[key]){
         // videos get deactivated by draw function when fade out is over
         fo_start[key] = ofGetElapsedTimef();
@@ -588,11 +592,11 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
               case 1:
                   layout = round(msg.value/(127/N_LAYOUTS/2))-N_LAYOUTS;
                   break;
-              case 63:
+              case 64:
                   sustain = (127-msg.value)/127;
                   if(sustain==0){stopSustain();}
                   break;
-              case 64:
+              case 63:
                   sostenuto = (127-msg.value)/127;
                   if(sostenuto==0){stopSostenuto();}
                   if(sostenuto==1){startSostenuto();}
