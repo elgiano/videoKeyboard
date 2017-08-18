@@ -68,6 +68,8 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		void stopSustain();
         void startSostenuto();
         void stopSostenuto();
+        void startSostenutoFreeze();
+        void stopSostenutoFreeze();
         void panic();
 
 		void keyPressed(int key);
@@ -88,11 +90,14 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		float speed; // global
 		float sustain;
         float sostenuto;
+        float sostenutoFreeze;
 
 		bool active_videos[MAX_VIDEOS];
 
 		bool sustained_videos[MAX_VIDEOS];
         bool sostenuto_videos[MAX_VIDEOS];
+        bool sostenutoFreeze_videos[MAX_VIDEOS];
+
 
 		float fo_start[MAX_VIDEOS];
 

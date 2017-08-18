@@ -60,7 +60,7 @@ bool ofApp::isCaptureKey (int key){
     
     return std::any_of(std::begin(capture_keys), std::end(capture_keys), [&](int i)
     {
-        cout << ofToString(key)<< endl;
+        //cout << ofToString(key)<< endl;
         return i == key && i>=0;
     });
 }
@@ -349,7 +349,7 @@ void ofApp::drawVideoInLayout(int movieN){
   }
 
   //ofLogVerbose() << "layout count " << ofToString(layoutCount[abs(layout)][layoutPos]) ;
- ofLogVerbose() << "fi/fo " << ofToString(fi_alpha) << "/" <<  ofToString(fo_alpha);
+  //ofLogVerbose() << "fi/fo " << ofToString(fi_alpha) << "/" <<  ofToString(fo_alpha);
 
     
     ofTexture thisTexture;
@@ -422,7 +422,7 @@ void ofApp::draw(){
 
   // draw videos
   for(int i=0;i<MAX_VIDEOS;i++){
-    if(active_videos[i]){
+    if(active_videos[i] or sostenuto_videos[i] or sostenutoFreeze_videos[i]){
       //ofLogVerbose() << "drawing " + ofToString(i);
       drawVideoInLayout(i);
       //ofLogVerbose() << "drawn " + ofToString(i);
@@ -434,21 +434,26 @@ void ofApp::draw(){
 //--------------------------------------------------------------
 void ofApp::update(){
   for(int i=0;i<MAX_VIDEOS;i++){
-    if(active_videos[i]){
+    if(active_videos[i] or sostenuto_videos[i] or sostenutoFreeze_videos[i]){
         if(!movie[i].isPlaying()){
             movie[i].setSpeed(speed*tapSpeed[i]);
             movie[i].setPosition(startPos[i]);
             movie[i].play();
+            
         }else{
             if(isCaptureKey(i)){
                 captureFromKey(i).update();
             }else{
               movie[i].setSpeed(speed*tapSpeed[i]);
+              if(sostenutoFreeze_videos[i]){
+                  movie[i].setPaused(true);
+                  cout << i <<" paused" <<endl;
+              }
               movie[i].update();
             }
             //ofLogVerbose() << "updated "+ofToString(i)+ofToString(active_videos[i]);
         }
-    }else if(movie[i].isPlaying()){movie[i].stop();}
+    }else if(movie[i].isPlaying() ){movie[i].stop();}
   }
 }
 
@@ -480,6 +485,9 @@ void ofApp::playVideo(int key, float vel){
       tapTempo[key] = now;
     }
     sustained_videos[key] = false;
+    sostenuto_videos[key] = false;
+    sostenutoFreeze_videos[key] = false;
+
   }
 }
 
@@ -500,14 +508,24 @@ void ofApp::stopVideo(int key){
   if(key>=0 && key < MAX_VIDEOS){
     //if(active_videos[key]){
       
-      if(sustain==0 and !sostenuto_videos[key]){
+      if(sustain==0 and !sostenuto_videos[key] and !sostenutoFreeze_videos[key]){
         // videos get deactivated by draw function when fade out is over
         fo_start[key] = ofGetElapsedTimef();
         // deactivateVideo(key);
         ofLog(OF_LOG_VERBOSE, "stopped video " + ofToString(key));
 
       }else{
-        sustained_videos[key] = true;
+          if(sustain>0){
+              sustained_videos[key] = true;
+          }
+          if(sostenuto>0){
+              sostenuto_videos[key] = true;
+              active_videos[key] = false;
+          }
+          if(sostenutoFreeze>0){
+              sostenutoFreeze_videos[key] = true;
+              active_videos[key] = false;
+          }
       }
     //}
   }
@@ -516,11 +534,6 @@ void ofApp::stopVideo(int key){
 void ofApp::changeAllSpeed(float control){
   float scaled =pow(3,2*control-1);
   speed = scaled;
-  /*for(int i=0;i<MAX_VIDEOS;i++){
-    if(active_videos[i]){
-      movie[i].setSpeed(scaled*tapSpeed[i]);
-    };
-  };*/
   //cout << "scaled: "<< ofToString(scaled) << endl;
 }
 
@@ -554,7 +567,29 @@ void ofApp::stopSostenuto(){
     for(int i=0;i<MAX_VIDEOS;i++){
         if(sostenuto_videos[i]){
             sostenuto_videos[i] = false;
-            stopVideo(i);
+            if(!active_videos[i]){
+                stopVideo(i);
+            }
+            
+        }
+    };
+}
+
+void ofApp::startSostenutoFreeze(){
+    sostenutoFreeze = 1;
+    memcpy(sostenutoFreeze_videos,active_videos,MAX_VIDEOS);
+    
+}
+
+void ofApp::stopSostenutoFreeze(){
+    sostenutoFreeze = 0;
+    for(int i=0;i<MAX_VIDEOS;i++){
+        if(sostenutoFreeze_videos[i]){
+            sostenutoFreeze_videos[i] = false;
+            //movie[i].setPaused(false);
+            if(!active_videos[i]){
+                stopVideo(i);
+            }
             
         }
     };
@@ -592,14 +627,19 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
               case 1:
                   layout = round(msg.value/(127/N_LAYOUTS/2))-N_LAYOUTS;
                   break;
-              case 64:
+              case 63:
                   sustain = (127-msg.value)/127;
                   if(sustain==0){stopSustain();}
                   break;
-              case 63:
+              case 65:
                   sostenuto = (127-msg.value)/127;
                   if(sostenuto==0){stopSostenuto();}
                   if(sostenuto==1){startSostenuto();}
+                  break;
+              case 64:
+                  sostenutoFreeze = (127-msg.value)/127;
+                  if(sostenutoFreeze==0){stopSostenutoFreeze();}
+                  if(sostenutoFreeze==1){startSostenutoFreeze();}
                   break;
           }
       
