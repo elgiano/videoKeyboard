@@ -284,12 +284,12 @@ class MyWindow(Gtk.Window):
         self.validateConfigs()
 
     def writeConfig(self,set_number):
-        path = self.sets[set_number]
-        with open(join(path,"config.json")) as data_file:
+        path = join(self.setsDir,self.sets[set_number],"config.json")
+        with open(path,"w") as data_file:
             try:
                 json.dump(self.configs[set_number],data_file)
             except:
-                print("JSONEncodeError: "+path)
+                pprint(exc_info())
 
     def saveAllConfigs(self):
         for i,c in enumerate(self.configs):
@@ -326,19 +326,9 @@ class MyWindow(Gtk.Window):
         unsavedList = self.findUnsavedConfigs()
         saveList = Gtk.Grid()
         saveList.set_row_spacing(10)
-        for i,unsaved in enumerate(unsavedList):
-            btn = Gtk.Button("Save")
-            # TODO: connect button to save
-            label = Gtk.Label(unsaved[1],xalign=0)
-            label.set_property("expand",True)
-            layout = Gtk.HBox(homogeneous=False,spacing=10)
-            saveList.attach(label,0,i,1,1)
-            saveList.attach(btn,1,i,1,1)
-
-
-
         dialog.vbox.pack_start(saveList,True,True,0)
 
+        self.fillUnsavedList(dialog,saveList)
 
         dialog.add_button(Gtk.STOCK_CANCEL,Gtk.ResponseType.CANCEL)
         dialog.add_button("Save All",Gtk.ResponseType.OK)
@@ -346,19 +336,39 @@ class MyWindow(Gtk.Window):
 
         response = dialog.run()
         if response == Gtk.ResponseType.OK:
-            # save all
-            print("save all")
+            self.saveAllConfigs()
         elif response == Gtk.ResponseType.CANCEL:
             print("Save canceled")
 
         dialog.destroy()
 
+    def saveOneAndReloadList(self,btn,dialog,saveList,id):
+        self.writeConfig(id)
+        if self.fillUnsavedList(dialog,saveList) == 0:
+            dialog.destroy()
+
+    def fillUnsavedList(self,dialog,saveList):
+        for e in saveList.get_children():
+            saveList.remove(e)
+        for i,unsaved in enumerate(self.findUnsavedConfigs()):
+            btn = Gtk.Button("Save")
+            btn.connect("clicked",self.saveOneAndReloadList,dialog,saveList,unsaved[0])
+            label = Gtk.Label(unsaved[1],xalign=0)
+            label.set_property("expand",True)
+            layout = Gtk.HBox(homogeneous=False,spacing=10)
+            saveList.attach(label,0,i,1,1)
+            saveList.attach(btn,1,i,1,1)
+        return len(self.findUnsavedConfigs())
+
+
     def validateConfigs(self):
-        for conf in self.configs:
+        for i,conf in enumerate(self.configs):
             if conf != None:
                 for key in ["general","sources","layouts","mappings"]:
                     if key not in conf:
                         conf[key] = {}
+            else:
+                self.configs[i] = self.defaultConfig.copy()
 
     # config shortcuts
     def selectedConf(self):
@@ -381,14 +391,7 @@ class MyWindow(Gtk.Window):
         # update GUI
         self.setListStore.clear()
         for i,set in enumerate(self.sets):
-            random = False
-            if(self.configs[i] != None):
-                if "random" in self.configs[i]["general"]:
-                    random = self.configs[i]["general"]["random"]
-                else:
-                    self.configs[i]["general"]["random"] = False
-            # TODO: replace 21 with button to midi mappings
-            self.setListStore.append([i==defaultIndex,set,random,21])
+            self.setListStore.append([i==defaultIndex,set])
 
     # then a set should be selected
 
@@ -408,7 +411,7 @@ class MyWindow(Gtk.Window):
             self.fillLayoutsList()
         else:
             self.clearGroupsListStore()
-            self.configs[self.selectedSet] = self.defaultConfig.copy
+            self.configs[self.selectedSet] = self.defaultConfig.copy()
         #self.loadSelectedSet()
 
     def selectedSetPath(self,fileName=""):
@@ -665,7 +668,7 @@ class MyWindow(Gtk.Window):
                 # create directory
                 if stack.get_visible_child_name() == "folder":
                     srcType = "folder"
-                    if folderRandom.value:
+                    if folderRandom.get_active():
                         srcType = "random"
                     path = join(join(self.setsDir,self.sets[self.selectedSet]),folderEntry.get_text())
                     if isdir(path):
@@ -814,7 +817,7 @@ class MyWindow(Gtk.Window):
 
         box_setSection.pack_start(setDirLayout, False, False, 0)
 
-        self.setListStore = Gtk.ListStore(bool,str,bool,int)
+        self.setListStore = Gtk.ListStore(bool,str)
         self.setList = Gtk.TreeView(self.setListStore)
         defaultCheck = Gtk.CellRendererToggle()
         defaultCheck.set_radio(True)
@@ -823,9 +826,6 @@ class MyWindow(Gtk.Window):
         col = Gtk.TreeViewColumn("Sets",Gtk.CellRendererText(),text=1)
         col.set_expand(True)
         self.setList.append_column(col)
-        randToggle = Gtk.CellRendererToggle();
-        randToggle.connect("toggled",self.setRandomnessToggled);
-        self.setList.append_column(Gtk.TreeViewColumn("Random",randToggle,active=2))
         btn = Gtk.CellRendererToggle()
         btn.set_radio(True)
         btn.connect("toggled",self.midiMappingDialog)
