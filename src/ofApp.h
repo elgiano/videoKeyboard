@@ -8,7 +8,7 @@
 
 #define MAX_VIDEOS 88
 #define MAX_CAPTURE 2
-#define N_LAYOUTS 5
+#define N_LAYOUTS 6 // fullscreen, double v, double h, triple, tryptich, quad
 #define MAX_LAYOUTPOS 4
 
 
@@ -16,8 +16,8 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 
 	public:
 		ofxHapPlayer  movie[MAX_VIDEOS];
-		int folders[MAX_VIDEOS];
-		int n_folders;
+		int layout_for_video[MAX_VIDEOS];
+		int n_layouts;
 		int layout;
 
 		int max_videos;
@@ -27,11 +27,13 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		float fade_out;
 
 		bool blending_multiply;
+		bool isDynamic = false;
+		bool isFading = true;
 
 		void newMidiMessage(ofxMidiMessage& eventArgs);
 		ofxMidiIn midiIn;
 		void setupMidi();
-    
+
         ofVideoGrabber capture[MAX_CAPTURE];
         int n_captures;
         int capture_sources[MAX_CAPTURE] = {0};
@@ -41,22 +43,28 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
         void initCapture();
         bool isCaptureKey( int key);
         ofVideoGrabber captureFromKey( int key );
-    
+
 
 		void setup();
 		void update();
 		void draw();
-    
+
         void drawVideoInLayout(int movieN);
 
-
+		void findConfig();
 		void scanDataDir();
 		void initVideoVariables(int key);
 		void loadConfig(string path);
 		void loadDefaultConfig();
-		void loadDataDir();
+		/*void loadDataDir();
 		void loadFolders();
-		void loadRandom();
+		void loadRandom();*/
+
+		void loadConfigNew(string path);
+		void loadMidiMappings();
+		void loadSourceGroup(string path, int layout);
+		void loadCaptureGroup(int deviceID, int layout);
+		void loadRandomGroup(string path,int size);
 
 
 		void playVideo(int key, float vel);
@@ -78,7 +86,8 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 
 	private:
 
-		// for multiply blending
+		// for multiply blending:
+		// register if layoutPos has been initialized (has already a texture)
 		int thisLayoutInit[MAX_LAYOUTPOS];
 
 		int screenW;
@@ -111,6 +120,59 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		int n_activeVideos;
 		float volume;
 
+		string pitchBendFunc="global_speed";
+		enum class MidiCommand {
+			fade_in,
+			fade_out,
+			global_speed,
+			layout_change,
+			saturation,
+			sustain,
+			sostenuto,
+			sostenuto_freeze,
+			dynamics_switch,
+			fade_switch,
+			blending_multiply_switch,
+			source_shuffle_switch,
+			sustain_mode
+		};
+
+		std::map<string, MidiCommand> midiMappingsStringsToCommand = {
+		 {"fade_in", MidiCommand::fade_in},
+		 {"fade_out", MidiCommand::fade_out},
+		 {"global_speed", MidiCommand::global_speed},
+		 {"layout_change", MidiCommand::layout_change},
+		 {"saturation" , MidiCommand::saturation},
+		 {"sustain", MidiCommand::sustain},
+		 {"sostenuto", MidiCommand::sostenuto},
+		 {"sostenuto_freeze", MidiCommand::sostenuto_freeze},
+		 {"dynamics_switch", MidiCommand::dynamics_switch},
+		 {"fade_switch", MidiCommand::fade_switch},
+		 {"blending_multiply_switch", MidiCommand::blending_multiply_switch},
+		 {"source_shuffle_switch", MidiCommand::source_shuffle_switch},
+		 {"sustain_mode", MidiCommand::sustain_mode }
+		};
+
+		std::map<string, int> midiMappings = {
+		 {"fade_in", 22},
+		 {"fade_out", 23},
+		 {"global_speed", -1},
+		 {"layout_change", 1},
+		 {"saturation" , 2},
+		 {"sustain", 64},
+		 {"sostenuto", 65},
+		 {"sostenuto_freeze", 66},
+		 {"dynamics_switch", 24},
+		 {"fade_switch", 25},
+		 {"blending_multiply_switch", 26},
+		 {"source_shuffle_switch", 27},
+		 {"sustain_mode", 28 }
+		};
+
+
+		std::map<int,MidiCommand> midiMapByValue;
+
+		int midiMaxVal;
 		// LAYOUTS
 		// 1: dual vertical (0-1)
 		// 2: dual horizontal (0-1)

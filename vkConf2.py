@@ -1,17 +1,17 @@
 #!/bin/python
-#/Users/sorenkjaergard/Documents/openFrameworks/apps/myApps/videoKeyboard-master/bin/sets
+#/home/giano/projects/soren/videoKeyboardHap/bin/sets
 
 from os import listdir, mkdir, symlink, remove, rename
-from os.path import isdir, isfile, join, getsize, abspath, isabs,realpath
+from os.path import isdir, isfile, join, getsize, abspath, isabs,realpath, basename
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk,Gdk,GObject
 import json
 from pprint import pprint
 from sys import exc_info
+import re
 
 class LayoutSelectorGroup(Gtk.HBox):
-
 
     @GObject.Signal
     def changed(self):
@@ -262,6 +262,15 @@ class MyWindow(Gtk.Window):
     #  load configs
     def loadConfigs(self):
 
+        self.defaultConfig = None
+        defaultConfFile = join(self.setsDir,"../defaultConf.json")
+        if isfile(defaultConfFile):
+            with open(defaultConfFile) as data_file:
+                try:
+                    self.defaultConfig = json.load(data_file)
+                except json.decoder.JSONDecodeError:
+                    print("JSONDecodeError: "+confFile)
+
         self.configs = [None for f in self.sets]
         for i,set in enumerate(self.sets):
             confFile = join(join(self.setsDir,set),"config.json")
@@ -271,7 +280,78 @@ class MyWindow(Gtk.Window):
                         self.configs[i] = json.load(data_file)
                     except json.decoder.JSONDecodeError:
                         print("JSONDecodeError: "+confFile)
+
         self.validateConfigs()
+
+    def writeConfig(self,set_number):
+        path = self.sets[set_number]
+        with open(join(path,"config.json")) as data_file:
+            try:
+                json.dump(self.configs[set_number],data_file)
+            except:
+                print("JSONEncodeError: "+path)
+
+    def saveAllConfigs(self):
+        for i,c in enumerate(self.configs):
+            if(c!=None):
+                self.writeConfig(i)
+
+    def saveSelectedConfig(self):
+        if(self.selectedConf() != None):
+            self.writeConfig(self.selectedSet)
+
+    def findUnsavedConfigs(self):
+        unsavedList = []
+        for i,set in enumerate(self.sets):
+            origConf = None
+            origConfFile = join(join(self.setsDir,set),"config.json")
+            if isfile(origConfFile):
+                with open(origConfFile) as data_file:
+                    try:
+                        origConf = json.load(data_file)
+                    except json.decoder.JSONDecodeError:
+                        print("JSONDecodeError: "+confFile)
+            if origConf != self.configs[i]:
+                unsavedList.append([i,set])
+        return unsavedList
+
+
+    def saveDialog(self,*argv):
+        dialog = Gtk.Dialog("Save Changes",self)
+        dialog.set_position(Gtk.WindowPosition.CENTER)
+
+        dialog.vbox.set_property("spacing",30)
+        dialog.vbox.pack_start(Gtk.Label("These sets have unsaved changes:",xalign=0),False,True,0)
+
+        unsavedList = self.findUnsavedConfigs()
+        saveList = Gtk.Grid()
+        saveList.set_row_spacing(10)
+        for i,unsaved in enumerate(unsavedList):
+            btn = Gtk.Button("Save")
+            # TODO: connect button to save
+            label = Gtk.Label(unsaved[1],xalign=0)
+            label.set_property("expand",True)
+            layout = Gtk.HBox(homogeneous=False,spacing=10)
+            saveList.attach(label,0,i,1,1)
+            saveList.attach(btn,1,i,1,1)
+
+
+
+        dialog.vbox.pack_start(saveList,True,True,0)
+
+
+        dialog.add_button(Gtk.STOCK_CANCEL,Gtk.ResponseType.CANCEL)
+        dialog.add_button("Save All",Gtk.ResponseType.OK)
+        dialog.show_all()
+
+        response = dialog.run()
+        if response == Gtk.ResponseType.OK:
+            # save all
+            print("save all")
+        elif response == Gtk.ResponseType.CANCEL:
+            print("Save canceled")
+
+        dialog.destroy()
 
     def validateConfigs(self):
         for conf in self.configs:
@@ -328,8 +408,22 @@ class MyWindow(Gtk.Window):
             self.fillLayoutsList()
         else:
             self.clearGroupsListStore()
-            print("noconf")
+            self.configs[self.selectedSet] = self.defaultConfig.copy
         #self.loadSelectedSet()
+
+    def selectedSetPath(self,fileName=""):
+        return join(join(self.setsDir,self.sets[self.selectedSet]),fileName)
+
+    def selectedGroupPath(self):
+        return self.selectedSetPath(self.selectedSourceConf()["src"])
+
+    def clearVideosListStore(self):
+        try:
+            self.videosListStore.disconnect_by_func(self.videosReordered)
+        except TypeError:
+            print("nothing connected when disconnecting")
+        self.videosListStore.clear()
+        self.videoListStore.connect("row-deleted",self.videosReordered)
 
     def clearGroupsListStore(self):
         try:
@@ -371,11 +465,19 @@ class MyWindow(Gtk.Window):
             else:
                 capture = False
                 src = group["src"]
-                if(isabs(group["src"])):
-                    size = len([f for f in listdir(group["src"]) if isfile(join(group["src"],f))])
+                if group["type"]=="random":
+                    if "size" not in group:
+                        group["size"] = 1
+                    size = group["size"]
                 else:
-                    size = len([f for f in listdir(join(path,group["src"])) if isfile(join(join(path,group["src"]),f))])
-            self.groupsListStore.append([i,str(group["src"]),capture,size,group["layout"]])
+                    if(isabs(group["src"])):
+                        size = len([f for f in listdir(group["src"]) if isfile(join(group["src"],f))])
+                    else:
+                        size = len([f for f in listdir(join(path,group["src"])) if isfile(join(join(path,group["src"]),f))])
+            self.groupsListStore.append([i,str(group["src"]),capture,size,group["layout"],0,0,"",group["type"]=="random"])
+
+        self.updateGroupsMIDI()
+
 
     def fillLayoutsList(self):
         conf = self.selectedConf()["layouts"]
@@ -416,6 +518,10 @@ class MyWindow(Gtk.Window):
 
 
     def fillVideoList(self):
+        try:
+            self.videoListStore.disconnect_by_func(self.videosReordered)
+        except:
+            print("")
         path = self.selectedSourceConf()["src"]
         if not isabs(path):
             path = join(join(self.setsDir,self.sets[self.selectedSet]),path)
@@ -426,8 +532,9 @@ class MyWindow(Gtk.Window):
         self.videoListStore.clear()
         for i,video in enumerate(self.videos):
             # todo: extract duration
-            self.videoListStore.append([i,video])
-        print(self.videos)
+            self.videoListStore.append([i,self.videoName(video),video])
+        self.videoListStore.connect("row-deleted",self.videosReordered)
+
 
     def fillCaptureList(self):
         if "captureID" not in self.selectedSourceConf():
@@ -503,7 +610,8 @@ class MyWindow(Gtk.Window):
             "layout":layoutID
         }
         # add to list model
-        self.groupsListStore.append([pos,name,srcType=="capture",0,layoutID])
+        self.groupsListStore.append([pos,name,srcType=="capture",0,layoutID,0,0,"",srcType=="random"])
+        self.updateGroupsMIDI()
 
     def newGroupDialog(self,*argv):
         dialog = Gtk.Dialog("Create New Source Group",self)
@@ -517,6 +625,9 @@ class MyWindow(Gtk.Window):
         folder.pack_start(Gtk.Label("Path:",xalign=0),False,False,0)
         folderEntry = Gtk.Entry()
         folder.pack_start(folderEntry,True,False,0)
+        folderRandom = Gtk.CheckButton("Random")
+        folder.pack_start(folderRandom,True,False,0)
+
 
         stack.add_titled(folder,"folder","Folder")
 
@@ -548,10 +659,14 @@ class MyWindow(Gtk.Window):
         done = False
         while not done:
             done = True
+            srcType = ""
             response = dialog.run()
             if response == Gtk.ResponseType.OK:
                 # create directory
                 if stack.get_visible_child_name() == "folder":
+                    srcType = "folder"
+                    if folderRandom.value:
+                        srcType = "random"
                     path = join(join(self.setsDir,self.sets[self.selectedSet]),folderEntry.get_text())
                     if isdir(path):
                         confirmation = self.askForConfirmation("Include existing directory","The directory exists already, do you want to include it?")
@@ -559,6 +674,7 @@ class MyWindow(Gtk.Window):
                             done = False
                             continue
                     else:
+                        srcType = "capture"
                         confirmation = self.askForConfirmation("Create new directory","The directory doesn't exist, do you want to create it?")
                         if not confirmation:
                             done = False
@@ -573,7 +689,7 @@ class MyWindow(Gtk.Window):
                             continue
 
                 # create new group
-                self.appendGroup(stack.get_visible_child_name(),folderEntry.get_text(),int(captureID.get_value()),int(layoutID.get_value()))
+                self.appendGroup(srcType,folderEntry.get_text(),int(captureID.get_value()),int(layoutID.get_value()))
 
             elif response == Gtk.ResponseType.CANCEL:
                 print("Group creation canceled")
@@ -585,6 +701,78 @@ class MyWindow(Gtk.Window):
         pos = len(self.selectedConf()["layouts"])
         self.selectedConf()["layouts"][str(pos)] = ",".join(["0" for l in self.layoutsGUI.layouts])
         self.layoutsListStore.append([pos])
+
+    def importVideos(self,*args):
+        path = self.selectedGroupPath()
+        # open file multiple dialog
+        dialog = Gtk.FileChooserDialog("Import Videos", self,
+            Gtk.FileChooserAction.OPEN,
+            (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+             Gtk.STOCK_OK, Gtk.ResponseType.OK))
+        dialog.set_select_multiple(True)
+        response = dialog.run();
+        if response == Gtk.ResponseType.OK:
+            # symlink
+            for f in dialog.get_filenames():
+                print("import:")
+                symlink(f,join(path,join(path,basename(f))))
+            self.fillVideoList()
+            self.renameWithOrder()
+            self.updateVideoCount()
+        elif response == Gtk.ResponseType.CANCEL:
+            print("Video import canceled")
+
+        dialog.destroy()
+
+    def videoName(self,fullName):
+        return re.match("^([0-9]+-)?(.*)",fullName).groups()[1]
+    def videoNameOrder(self,fullName):
+        return re.match("^([0-9]+-)?(.*)",fullName).groups()[0]
+
+    def videosReordered(self,*argv):
+        self.renameWithOrder()
+
+    def renameWithOrder(self):
+        grpPath = self.selectedGroupPath()
+        # move all to tmp
+        if not isdir(join(grpPath,"tmp")):
+            mkdir(join(grpPath,"tmp"))
+        for i,row in enumerate(self.videoListStore):
+            rename(join(grpPath,row[2]),join(grpPath,"tmp",row[2]))
+        # move all back, change prefix to new order
+        for i,row in enumerate(self.videoListStore):
+            # update list model
+            row[0] = i
+            # move files
+            newName =  str(i).zfill(2) + "-" + row[1]
+            rename(join(grpPath,"tmp",row[2]),join(grpPath,newName))
+            row[2] = newName
+
+        #self.fillVideoList()
+
+
+    # TODO
+    def removeVideos(self):
+        path = self.selectedGroupPath()
+        #self.updateVideoCount()
+        print(path)
+
+    def updateVideoCount(self):
+        if self.selectedSourceConf()["type"]=="random":
+            self.groupsListStore[self.selectedGroup][3] = self.selectedSourceConf()["size"]
+        self.groupsListStore[self.selectedGroup][3] = len(self.videoListStore)
+        self.updateGroupsMIDI()
+
+    def updateGroupsMIDI(self):
+        lowest_midi = 21 # temp
+        for g in self.groupsListStore:
+            g[5] = lowest_midi
+            if g[2]:
+                g[6] = g[5] + 1
+            else:
+                g[6] = g[5]+g[3]
+            lowest_midi = g[6]
+            g[7] = str(g[5])+"-"+str(g[6])
 
     def __init__(self):
 
@@ -638,13 +826,17 @@ class MyWindow(Gtk.Window):
         randToggle = Gtk.CellRendererToggle();
         randToggle.connect("toggled",self.setRandomnessToggled);
         self.setList.append_column(Gtk.TreeViewColumn("Random",randToggle,active=2))
-        self.setList.append_column(Gtk.TreeViewColumn("MIDI map",Gtk.CellRendererPixbuf()))
+        btn = Gtk.CellRendererToggle()
+        btn.set_radio(True)
+        btn.connect("toggled",self.midiMappingDialog)
+        self.setList.append_column(Gtk.TreeViewColumn("MIDI map",btn))
 
 
         self.setList.connect("cursor-changed",self.selectSet)
 
         setListLayout = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         setListLayout.pack_start(self.setList, True, True, 0)
+
 
         box_setSection.pack_start(setListLayout,True, True, 0)
 
@@ -654,6 +846,10 @@ class MyWindow(Gtk.Window):
 
         box_outer.pack_start(box_setSection,True,True,0)
 
+        # midi list store
+
+        self.midiListStore = Gtk.ListStore(str,str,int)
+
         # groups section
 
         self.groupsSection = Gtk.VBox(homogeneous=False, spacing=10)
@@ -662,12 +858,13 @@ class MyWindow(Gtk.Window):
 
         saveBox = Gtk.HBox(homogeneous=False)
         saveBtn = Gtk.Button("Save")
+        saveBtn.connect("clicked",self.saveDialog)
         saveBox.pack_end(saveBtn,False,False,0)
         self.groupsSection.pack_start(saveBox,False,False,0)
 
         box_groupsLists = Gtk.HBox(homogeneous=True, spacing=10)
         box_groupListAndBtns = Gtk.VBox(homogeneous=False, spacing=10)
-        self.groupsListStore = Gtk.ListStore(int,str,bool,int,int)
+        self.groupsListStore = Gtk.ListStore(int,str,bool,int,int,int,int,str,bool)
         self.groupsList = Gtk.TreeView(self.groupsListStore)
         self.groupsList.set_reorderable(True)
         self.groupsListStore.connect("row-deleted",self.groupsReordered)
@@ -688,7 +885,17 @@ class MyWindow(Gtk.Window):
         self.groupLayoutCol.connect("edited", self.setGroupLayout)
         self.groupsList.append_column(Gtk.TreeViewColumn("Layout",self.groupLayoutCol ,text=4))
 
-        self.groupsList.append_column(Gtk.TreeViewColumn("Videos",Gtk.CellRendererText(),text=3))
+        renderer = Gtk.CellRendererText()
+        renderer.connect("edited", self.randomGroupSizeChanged)
+        self.groupsList.append_column(Gtk.TreeViewColumn("Videos",renderer,text=3,editable=8))
+
+        randToggle = Gtk.CellRendererToggle()
+        randToggle.connect("toggled",self.groupRandomnessToggled)
+        self.groupsList.append_column(Gtk.TreeViewColumn("Random",randToggle,active=8))
+
+        #self.groupsList.append_column(Gtk.TreeViewColumn("Lowest note",Gtk.CellRendererText(),text=5))
+        #self.groupsList.append_column(Gtk.TreeViewColumn("Highest note",Gtk.CellRendererText(),text=6))
+        self.groupsList.append_column(Gtk.TreeViewColumn("MIDI range",Gtk.CellRendererText(),text=7))
 
         self.groupsList.connect("cursor-changed",self.selectGroup)
 
@@ -707,14 +914,17 @@ class MyWindow(Gtk.Window):
         self.rightPanel.set_transition_duration(1000)
 
         box_videoSection = Gtk.VBox(homogeneous=False,spacing=10)
-        self.videoListStore = Gtk.ListStore(int,str)
+        self.videoListStore = Gtk.ListStore(int,str,str)
         self.videoList = Gtk.TreeView(self.videoListStore)
+        self.videoList.set_reorderable(True)
+        self.videoListStore.connect("row-deleted",self.videosReordered)
         self.videoList.append_column(Gtk.TreeViewColumn("",Gtk.CellRendererText(),text=0))
         self.videoList.append_column(Gtk.TreeViewColumn("Videos",Gtk.CellRendererText(),text=1))
         box_videoSection.pack_start(self.videoList,True,True,0)
         # video buttons
         ### box_videoBtn = Gtk.HBox(homogeneous=True,spacing=5)
         btn = Gtk.Button("+ Import Videos")
+        btn.connect("clicked",self.importVideos)
         box_videoSection.pack_start(btn,False,True,0)
         '''box_videoBtn.pack_start(btn,True,True,0)
         btn = Gtk.Button("Up")
@@ -783,9 +993,23 @@ class MyWindow(Gtk.Window):
         else:
             print("set has no config")
 
+    def groupRandomnessToggled(self,widget,path):
+        if not self.groupsListStore[path][2]: # act only on non capture groups
+            self.groupsListStore[path][8] = not self.groupsListStore[path][8]
+            if self.groupsListStore[path][8]:
+                self.selectedConf()["sources"][path]["type"] = "random"
+            else:
+                self.selectedConf()["sources"][path]["type"] = "folder"
+            self.fillGroupsList()
+
+    def randomGroupSizeChanged(self,renderer,path,value):
+        self.selectedGroup = int(path)
+        self.groupsListStore[path][3] = int(value)
+        self.selectedSourceConf()["size"] = int(value)
+
+
     def groupCaptureToggled(self,wi,path):
-        if(self.selectedGroup==None):
-            self.selectedGroup = int(path)
+        self.selectedGroup = int(path)
         self.groupsListStore[path][2] = not self.groupsListStore[path][2]
         if self.groupsListStore[path][2]:
             self.selectedSourceConf()["type"] = "capture"
@@ -799,6 +1023,7 @@ class MyWindow(Gtk.Window):
             self.groupsListStore[self.selectedGroup][1] = str(self.selectedSourceConf()["captureID"])
         else:
             self.groupsListStore[self.selectedGroup][1] = self.selectedSourceConf()["src"]
+        self.updateGroupsMIDI()
 
 
     def setCaptureDevice(self,*argv):
@@ -815,6 +1040,7 @@ class MyWindow(Gtk.Window):
             self.groupLayoutCol.set_property("adjustment",Gtk.Adjustment(0,0,len(self.selectedConf()["layouts"]),1,1,1))
         else:
             self.groupLayoutCol.set_property("adjustment",Gtk.Adjustment(0,0,0,1,1,1))
+
 
     def groupsReordered(self,*argv):
         # check current order
@@ -838,6 +1064,7 @@ class MyWindow(Gtk.Window):
         # update numbering in the model
         for i,row in enumerate(self.groupsListStore):
             row[0] = i
+        self.updateGroupsMIDI()
 
     def renameGroup(self,renderer,treepath,newName):
         if self.groupsListStore[treepath][2]:
@@ -880,6 +1107,51 @@ class MyWindow(Gtk.Window):
             self.selectedConf()["sources"][treepath]["src"] = newName
             # update gui
             self.groupsListStore[treepath][1] = newName
+
+
+    # MIDI MAPPING dialog
+    def midiMappingDialog(self,*argv):
+        dialog = Gtk.Dialog("MIDI Mapping",self)
+        dialog.set_position(Gtk.WindowPosition.CENTER)
+
+        self.loadMidiConf()
+
+        midiList =  Gtk.TreeView(self.midiListStore)
+        midiList.append_column(Gtk.TreeViewColumn("Function",Gtk.CellRendererText(),text=1))
+        midiSpin = Gtk.CellRendererSpin()
+        midiSpin.set_property("editable",True)
+        midiSpin.set_property("adjustment", Gtk.Adjustment(0,-1,127,1,1,1))
+        midiSpin.connect("edited",self.midiMappingEdited)
+        midiSpin.connect("editing-started",self.midiLearn)
+        midiList.append_column(Gtk.TreeViewColumn("MIDI",midiSpin,text=2))
+
+        dialog.vbox.pack_start(midiList,True,True,0)
+        dialog.add_button(Gtk.STOCK_CANCEL,Gtk.ResponseType.CANCEL)
+        dialog.add_button(Gtk.STOCK_OK,Gtk.ResponseType.OK)
+        dialog.show_all()
+        response = dialog.run()
+        dialog.destroy()
+
+    def loadMidiConf(self):
+        self.midiListStore.clear()
+        if "mappings" in self.defaultConfig:
+            for funcName in self.defaultConfig["mappings"]:
+                print(funcName)
+                code = self.defaultConfig["mappings"][funcName]
+                if funcName in self.selectedConf()["mappings"]:
+                    code = self.selectedConf()["mappings"][funcName]
+                prFuncName = funcName.replace("_"," ").title()
+                self.midiListStore.append([funcName,prFuncName,code])
+
+    def midiMappingEdited(self,renderer,path,newValue):
+        # update model
+        self.midiListStore[path][2] = int(newValue)
+        # update config
+        self.selectedConf()["mappings"][self.midiListStore[path][0]] = int(newValue)
+        print(self.selectedConf()["mappings"])
+
+    def midiLearn(self,renderer,spinButton,path):
+        print(path)
 
     def on_destroy(self,*argv):
         self.saveSetDir()

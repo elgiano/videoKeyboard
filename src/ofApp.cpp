@@ -10,29 +10,25 @@
 
 //--------------------------------------------------------------
 void ofApp::setup(){
-    
-    ofSetLogLevel(OF_LOG_VERBOSE);
-    
+
+  ofSetLogLevel(OF_LOG_VERBOSE);
+
   screenW = ofGetScreenWidth();
   screenH = ofGetScreenHeight();
 
   speed = 1.0;
   layout = 0;
-    
+
   n_captures = 0;
-    
-  scanDataDir();
-  //loadDataDir();
-  //loadFolders();
+  n_videos = 0;
 
-
+  //scanDataDir();
+  findConfig();
+  midiMaxVal = 127;
   setupMidi();
 
   ofBackground(0,0,0);
   ofEnableAlphaBlending();
-    
-
-
 }
 
 // ####### CAPTURE  #########
@@ -57,7 +53,7 @@ ofVideoGrabber ofApp::captureFromKey(int key){
 }
 
 bool ofApp::isCaptureKey (int key){
-    
+
     return std::any_of(std::begin(capture_keys), std::end(capture_keys), [&](int i)
     {
         //cout << ofToString(key)<< endl;
@@ -67,7 +63,21 @@ bool ofApp::isCaptureKey (int key){
 
 // ####### DATA DIR #########
 
-void ofApp::scanDataDir(){
+void ofApp::findConfig(){
+  ofDirectory dir(ofToDataPath(""));
+  // config file
+  dir.allowExt("json");
+  dir.listDir();
+  dir.sort();
+
+  loadDefaultConfig();
+  if(dir.size()>0){
+    loadConfigNew(dir.getPath(0));
+  }
+}
+
+// TODO: remove this old function
+/*void ofApp::scanDataDir(){
 
   ofDirectory dir(ofToDataPath(""));
   // config file
@@ -76,14 +86,13 @@ void ofApp::scanDataDir(){
   dir.sort();
 
   if(dir.size()>0){
-    loadConfig(dir.getPath(0));
+    loadConfigNew(dir.getPath(0));
   }else{
     loadDefaultConfig();
   }
 
   // subdirs
-  //ofDirectory dir(ofToDataPath(""));
-    dir.allowExt("");
+  dir.allowExt("");
   dir.listDir();
   dir.sort();
 
@@ -131,17 +140,17 @@ void ofApp::loadConfig(string path){
   }
   if(Settings::get().exists("folders")){
     // count folders, init layoutConf
-    n_folders = 0;
+    n_layouts = 0;
     int thisFolder = 0;
     while(Settings::get().exists("folders/"+std::to_string(thisFolder++))){
-      n_folders++;
+      n_layouts++;
     }
 
-    layoutConf = new int*[n_folders];
-    cout << ofToString(n_folders) <<" folders" << endl;
+    layoutConf = new int*[n_layouts];
+    cout << ofToString(n_layouts) <<" folders" << endl;
 
     // for each, split the data in N_LAYOUT numbers
-    for(thisFolder = 0; thisFolder < n_folders; thisFolder++){
+    for(thisFolder = 0; thisFolder < n_layouts; thisFolder++){
       std::vector<string> positions = ofSplitString(Settings::getString("folders/"+std::to_string(thisFolder)),",");
       layoutConf[thisFolder] = new int[N_LAYOUTS];
       for(unsigned j=0;j<positions.size() && j<N_LAYOUTS;j++){
@@ -150,7 +159,7 @@ void ofApp::loadConfig(string path){
     }
 
   }
-    
+
     if(Settings::get().exists("capture")){
         // count folders, init layoutConf
         n_captures = 0;
@@ -159,19 +168,149 @@ void ofApp::loadConfig(string path){
             if(Settings::get().exists("capture/layout/"+std::to_string(n_captures))){
                 capture_layouts[n_captures] =  Settings::getInt("capture/layout/"+ofToString(n_captures));
             }
-            
+
             cout << "capture #" << ofToString(n_captures) << " device:" << ofToString(capture_sources[n_captures]) << endl;
-            
+
             n_captures++;
         }
         initCapture();
     }
 
 
+}*/
+
+void ofApp::loadConfigNew(string path){
+  Settings::get().load(path);
+  if( Settings::get().exists("general")){
+      cout << "custom conf" << endl;
+      if(Settings::get().exists("general/first_midinote")){
+        first_midinote=Settings::getInt("general/first_midinote");
+      }
+      if(Settings::get().exists("general/midi_port")){
+          midi_port=Settings::getInt("general/midi_port");
+      }
+      if(Settings::get().exists("general/fade_in")){
+        fade_in=Settings::getFloat("general/fade_in");
+      }
+      if(Settings::get().exists("general/fade_out")){
+        fade_out=Settings::getFloat("general/fade_out");
+      }
+      if(Settings::get().exists("general/blending_multiply")){
+         blending_multiply=Settings::getBool("general/blending_multiply");
+      }
+      if(Settings::get().exists("general/random")){
+         random=Settings::getBool("general/random");
+      }
+  }
+  if(Settings::get().exists("layouts")){
+    // count folders, init layoutConf
+    n_layouts = 0; // TODO: change to n_layouts
+    int thisFolder = 0;
+    while(Settings::get().exists("layouts/"+std::to_string(thisFolder++))){
+      n_layouts++;
+    }
+
+    layoutConf = new int*[n_layouts];
+    cout << ofToString(n_layouts) <<" layout groups" << endl;
+
+    // for each, split the data in N_LAYOUT numbers
+    for(thisFolder = 0; thisFolder < n_layouts; thisFolder++){
+      std::vector<string> positions = ofSplitString(Settings::getString("layouts/"+std::to_string(thisFolder)),",");
+      layoutConf[thisFolder] = new int[N_LAYOUTS];
+      for(unsigned j=0;j<positions.size() && j<N_LAYOUTS;j++){
+        layoutConf[thisFolder][j] = std::stoi(positions[j]);
+      }
+    }
+
+  }
+  if(Settings::get().exists("sources")){
+    int thisFolder = 0;
+    while(Settings::get().exists("sources/"+std::to_string(thisFolder))){
+      int thisLayout=0;
+      int thisDeviceID=0;
+      bool thisIsCapture = false;
+      bool thisIsRandom = false;
+      string thisSrc = "";
+      //type, source, layout
+      if(Settings::get().exists("sources/"+std::to_string(thisFolder)+"/type")){
+          if(Settings::getString("sources/"+std::to_string(thisFolder)+"/type")=="capture"){
+            thisIsCapture = true;
+          }else if(Settings::getString("sources/"+std::to_string(thisFolder)+"/type")=="random"){
+            thisIsRandom = true;
+          }
+      }
+
+      if(Settings::get().exists("sources/"+std::to_string(thisFolder)+"/src")){
+        if(thisIsCapture){
+          thisDeviceID = Settings::getInt("sources/"+std::to_string(thisFolder)+"/src");
+        }else{
+          thisSrc = Settings::getString("sources/"+std::to_string(thisFolder)+"/src");
+        }
+      }
+
+      if(Settings::get().exists("sources/"+std::to_string(thisFolder)+"/layout")){
+        thisLayout = Settings::getInt("sources/"+std::to_string(thisFolder)+"/layout");
+      }
+
+      // load source group
+      cout << "source group #"<< ofToString(thisFolder)<< " capture:" << ofToString(thisIsCapture) << " random:"<<ofToString(thisIsRandom) <<" src:" << ofToString(thisSrc) << " layout:" << ofToString(thisLayout) << endl;
+      if(thisIsCapture){
+        capture_sources[n_captures] = thisDeviceID;
+        loadCaptureGroup(capture_sources[n_captures],thisLayout);
+      }else{
+        if(thisIsRandom){
+          int randSize = 1;
+          if(Settings::get().exists("sources/"+std::to_string(thisFolder)+"/size")){
+              randSize = Settings::getInt("sources/"+std::to_string(thisFolder)+"/size");
+          }
+          loadRandomGroup(thisSrc,randSize);
+        }else{
+          loadSourceGroup(thisSrc,thisLayout);
+        }
+      }
+
+      thisFolder++;
+    }
+    if(n_captures>0){
+      initCapture();
+    }
+
+  }
+  if(Settings::get().exists("mappings")){
+    loadMidiMappings();
+  }
+
+}
+
+void ofApp::loadMidiMappings(){
+  // iterate midi keys
+  for(std::map<string,int>::iterator iter = midiMappings.begin(); iter != midiMappings.end(); ++iter)
+  {
+    string k =  iter->first;
+    int value = 0;
+    if(Settings::get().exists("mappings/"+k)){
+      value = Settings::getInt("mappings/"+k);
+      midiMappings[k] = value;
+      cout << k << ": " << value << endl;
+    }
+    if(Settings::get().exists("mappings/first_midinote")){
+      first_midinote = Settings::getInt("mappings/first_midinote");
+    }
+    if(Settings::get().exists("mappings/midi_port")){
+      midi_port = Settings::getInt("mappings/midi_port");
+    }
+  }
+
+  // flop list for faster search on midi message
+  for (map<string, int>::iterator i = midiMappings.begin(); i != midiMappings.end(); ++i){
+    midiMapByValue[i->second] = midiMappingsStringsToCommand[i->first];
+  }
+
 }
 
 void ofApp::loadDefaultConfig(){
   cout << "default conf" << endl;
+  /*
   first_midinote = 21;
   midi_port = 1;
   fade_in = 0.01;
@@ -179,17 +318,18 @@ void ofApp::loadDefaultConfig(){
   blending_multiply = false;
   random = false;
 
-  n_folders = 4;
+  n_layouts = 4;
 
-  layoutConf = new int*[n_folders];
+  layoutConf = new int*[n_layouts];
 
   layoutConf[0] = new int[N_LAYOUTS]{0,1,0,0,0};
   layoutConf[1] = new int[N_LAYOUTS]{1,0,1,1,1};
   layoutConf[2] = new int[N_LAYOUTS]{0,1,2,2,2};
   layoutConf[3] = new int[N_LAYOUTS]{1,0,3,1,3};
-    
+
   n_captures = 0;
-    for(int i =0; i< MAX_CAPTURE; i++){capture_keys[i] = -1;}
+    for(int i =0; i< MAX_CAPTURE; i++){capture_keys[i] = -1;}*/
+  loadConfigNew(ofToDataPath("../defaultConf.json"));
 }
 
 // ## load videos ##
@@ -204,6 +344,7 @@ void ofApp::initVideoVariables(int key){
   movie[key].setLoopState(OF_LOOP_NORMAL);
 }
 
+/*
 void ofApp::loadDataDir(){
   ofDirectory dir(ofToDataPath(""));
   dir.allowExt("mov");
@@ -215,11 +356,12 @@ void ofApp::loadDataDir(){
   for(int i=0;i<MAX_VIDEOS && i<n_videos;i++){
     movie[i].load(dir.getPath(i));
     initVideoVariables(i);
-    folders[i] = round(ofRandom(0,n_folders-1));
+    layout_for_video[i] = round(ofRandom(0,n_layouts-1));
 
     cout << "Preloading " << i <<" "<< dir.getPath(i%n_videos) << endl;
   }
 }
+
 
 void ofApp::loadFolders(){
   ofDirectory dir(ofToDataPath(""));
@@ -242,20 +384,20 @@ void ofApp::loadFolders(){
           for(int k=0; k<n_captures; k++){
               capture_keys[k] = n_videos;
               initVideoVariables(n_videos);
-              folders[n_videos] = capture_layouts[k];
-              
+              layout_for_video[n_videos] = capture_layouts[k];
+
               cout << "Placing capture #"<< ofToString(k) <<"at key " << ofToString(n_videos)  << endl;
-              
+
               n_videos++;
-              
+
           }
-      
+
       }else{
           // load all videos in subfolder
     for(int k=0;k<tot_videos;k++){
       movie[n_videos].load(subdir.getPath(k));
       initVideoVariables(n_videos);
-      folders[n_videos] = n_dirs;
+      layout_for_video[n_videos] = n_dirs;
 
       n_videos++;
 
@@ -265,8 +407,57 @@ void ofApp::loadFolders(){
     n_dirs++;
   }
 
+}*/
+
+void ofApp::loadSourceGroup(string path,int layout){
+    ofDirectory subdir(path);
+    subdir.listDir();
+    subdir.sort();
+    int tot_videos = subdir.size();
+    for(int k=0;k<tot_videos;k++){
+      if(ofFile(subdir.getPath(k)).isFile()){
+        movie[n_videos].load(subdir.getPath(k));
+        initVideoVariables(n_videos);
+        layout_for_video[n_videos] = layout;
+        n_videos++;
+
+        cout << "Preloading " << n_videos  <<" "<< subdir.getPath(k)<< endl;
+      }
+    }
 }
 
+void ofApp::loadCaptureGroup(int deviceID,int layout){
+      capture_keys[n_captures] = n_videos;
+      initVideoVariables(n_videos);
+      layout_for_video[n_videos] = layout;
+
+      cout << "Placing capture #"<< ofToString(n_captures) <<"at key " << ofToString(n_videos)  << endl;
+
+      n_captures++;
+      n_videos++;
+}
+
+// random group
+void ofApp::loadRandomGroup(string path,int size){
+  ofDirectory dir(ofToDataPath(path));
+  dir.allowExt("mov");
+  dir.listDir();
+  dir.sort();
+  int n_sources = dir.size();
+
+  for(int i=0;i<size;i++){
+    string path = dir.getPath(round(ofRandom(0,n_sources-1)));
+    movie[n_videos].load(path);
+    initVideoVariables(i);
+    layout_for_video[n_videos] = round(ofRandom(0,n_layouts-1));
+    startPos[n_videos] = ofRandom(0.0,1.0);
+    n_videos++;
+    cout << "Preloading random #" << i  <<": " << startPos[i] <<"@"<< path << endl;
+  }
+
+}
+
+/*
 void ofApp::loadRandom(){
   ofDirectory dir(ofToDataPath(""));
   dir.allowExt("mov");
@@ -280,14 +471,14 @@ void ofApp::loadRandom(){
     string path = dir.getPath(round(ofRandom(0,n_sources-1)));
     movie[i].load(path);
     initVideoVariables(i);
-    folders[i] = round(ofRandom(0,n_folders-1));
+    layout_for_video[i] = round(ofRandom(0,n_layouts-1));
     startPos[i] = ofRandom(0.0,1.0);
 
     cout << "Preloading random #" << i  <<": " << startPos[i] <<"@"<< path << endl;
   }
 
 }
-
+*/
 
 /*void ofApp::setVolume(){
   volume = 1 - (n_activeVideos);
@@ -298,9 +489,15 @@ void ofApp::loadRandom(){
 void ofApp::drawVideoInLayout(int movieN){
   float w = movie[movieN].getWidth();
   float h = movie[movieN].getHeight();
+
+  float thisDyn = 1.0;
+  if(isDynamic){
+    thisDyn = dyn[movieN];
+  }
+
   float fi_alpha = 1;
     // fade in
-    if(fade_in>0){
+    if(fade_in>0 && isFading){
         fi_alpha = (movie[movieN].getPosition()-startPos[movieN])*movie[movieN].getDuration();
         fi_alpha = fi_alpha/fade_in;fi_alpha = fi_alpha <= 0 ? 0 : fi_alpha >= 1 ? 1 : fi_alpha;
     }
@@ -309,22 +506,22 @@ void ofApp::drawVideoInLayout(int movieN){
     float fo_alpha = 1;
     if(fade_out==0 && fo_start[movieN] > 0){
         {deactivateVideo(movieN);fo_start[movieN] = 0.0;return;}
-    }else if(fo_start[movieN] > 0 && fade_out>0){
+    }else if(fo_start[movieN] > 0 && fade_out>0 && isFading){
       fo_alpha = ofGetElapsedTimef()-fo_start[movieN];
-      
+
       if(fo_alpha>=fade_out){deactivateVideo(movieN);fo_start[movieN] = 0.0;return;}
-   
+
       fo_alpha = 1-(fo_alpha/fade_out);
       fo_alpha = fo_alpha <= 0 ? 0 : fo_alpha >= 1 ? 1 : fo_alpha;
-      
+
    }
 
 
   int layoutPos=0;
   if(layout>0 || layout < (-2)){
-    layoutPos = layoutConf[folders[movieN]][abs(layout)-1];
+    layoutPos = layoutConf[layout_for_video[movieN]][abs(layout)-1];
   }else if(layout<0){
-    layoutPos = abs(layoutConf[folders[movieN]][abs(layout)-1]-1);
+    layoutPos = abs(layoutConf[layout_for_video[movieN]][abs(layout)-1]-1);
   }
 
   //cout <<  ofToString(thisLayoutInit[0]) <<  ofToString(thisLayoutInit[1])<<  ofToString(thisLayoutInit[2])<< endl;
@@ -341,17 +538,18 @@ void ofApp::drawVideoInLayout(int movieN){
       ofEnableBlendMode(OF_BLENDMODE_MULTIPLY);
       //cout << ofToString(thisLayoutInit[layoutPos])<< " pos"<< ofToString(layoutPos) << endl;
     }
-    ofSetColor(255,255,255,255*fi_alpha*fo_alpha*dyn[movieN]);
+    ofSetColor(255,255,255,255*fi_alpha*fo_alpha*thisDyn);
   }else{
     // alpha blending:
+    ofEnableAlphaBlending();
     // logarithmic layering * fade_in_transparency * fade_out_transparency * dynamic level
-    ofSetColor(255,255,255,255/log2(layoutCount[abs(layout)][layoutPos]+2)*fi_alpha*fo_alpha*dyn[movieN]);
+    ofSetColor(255,255,255,255/log2(layoutCount[abs(layout)][layoutPos]+2)*fi_alpha*fo_alpha*thisDyn);
   }
 
   //ofLogVerbose() << "layout count " << ofToString(layoutCount[abs(layout)][layoutPos]) ;
   //ofLogVerbose() << "fi/fo " << ofToString(fi_alpha) << "/" <<  ofToString(fo_alpha);
 
-    
+
     ofTexture thisTexture;
     if(isCaptureKey(movieN)){
         thisTexture.loadData(captureFromKey(movieN).getPixels());
@@ -412,7 +610,7 @@ void ofApp::draw(){
   memset(layoutCount, 0, sizeof(layoutCount));
   // count videos in each layoutPos
   for(int i=0;i<MAX_VIDEOS;i++){if(active_videos[i]){
-    thisLayoutPos = layoutConf[folders[i]];
+    thisLayoutPos = layoutConf[layout_for_video[i]];
     layoutCount[0][0]++;
     for(int j=0;j<N_LAYOUTS;j++){
       layoutCount[j+1][thisLayoutPos[j]]++;
@@ -439,7 +637,7 @@ void ofApp::update(){
             movie[i].setSpeed(speed*tapSpeed[i]);
             movie[i].setPosition(startPos[i]);
             movie[i].play();
-            
+
         }else{
             if(isCaptureKey(i)){
                 captureFromKey(i).update();
@@ -447,7 +645,7 @@ void ofApp::update(){
               movie[i].setSpeed(speed*tapSpeed[i]);
               if(sostenutoFreeze_videos[i]){
                   movie[i].setPaused(true);
-                  cout << i <<" paused" <<endl;
+                  //cout << i <<" paused" <<endl;
               }
               movie[i].update();
             }
@@ -474,7 +672,7 @@ void ofApp::playVideo(int key, float vel){
     // update dynamics and stop fade_out
     dyn[key] = vel;
     fo_start[key] = 0;
-      
+
       if(!active_videos[key]){
           active_videos[key] = true;
           n_activeVideos++;
@@ -498,7 +696,7 @@ void ofApp::deactivateVideo(int key){
 
   // now the actual stop method is called by update()
   //movie[key].stop();
-  
+
   n_activeVideos--;
 }
 void ofApp::stopVideo(int key){
@@ -507,7 +705,7 @@ void ofApp::stopVideo(int key){
 
   if(key>=0 && key < MAX_VIDEOS){
     //if(active_videos[key]){
-      
+
       if(sustain==0 and !sostenuto_videos[key] and !sostenutoFreeze_videos[key]){
         // videos get deactivated by draw function when fade out is over
         fo_start[key] = ofGetElapsedTimef();
@@ -570,7 +768,7 @@ void ofApp::stopSostenuto(){
             if(!active_videos[i]){
                 stopVideo(i);
             }
-            
+
         }
     };
 }
@@ -578,7 +776,7 @@ void ofApp::stopSostenuto(){
 void ofApp::startSostenutoFreeze(){
     sostenutoFreeze = 1;
     memcpy(sostenutoFreeze_videos,active_videos,MAX_VIDEOS);
-    
+
 }
 
 void ofApp::stopSostenutoFreeze(){
@@ -590,7 +788,7 @@ void ofApp::stopSostenutoFreeze(){
             if(!active_videos[i]){
                 stopVideo(i);
             }
-            
+
         }
     };
 }
@@ -605,11 +803,9 @@ void ofApp::setupMidi(){
 
 //--------------------------------------------------------------
 void ofApp::newMidiMessage(ofxMidiMessage& msg) {
-    
-    ofLogVerbose() << ofToString(msg.deltatime) << " ) " << msg.getStatusString(msg.status) << " " <<ofToString(((int)msg.pitch)) << " " << ofToString(msg.velocity) << " " << ofToString(msg.control) << " " << ofToString(msg.value);
 
-	// make a copy of the latest message
-	// midiMessage = msg;
+  //ofLogVerbose() << ofToString(msg.deltatime) << " ) " << msg.getStatusString(msg.status) << " " <<ofToString(((int)msg.pitch)) << " " << ofToString(msg.velocity) << " " << ofToString(msg.control) << " " << ofToString(msg.value);
+
   switch(msg.status) {
     case MIDI_NOTE_ON :
       if(msg.velocity>0){
@@ -620,36 +816,77 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
       stopVideo(msg.pitch-first_midinote);
       break;
     case MIDI_PITCH_BEND:
-      changeAllSpeed((float) msg.value/16383);
-      break;
+      msg.control = -1;
+      midiMaxVal = 16383; // set maxVal to pitchBend
     case MIDI_CONTROL_CHANGE:
-          switch(msg.control){
-              case 1:
-                  layout = round(msg.value/(127/N_LAYOUTS/2))-N_LAYOUTS;
-                  break;
-              case 63:
-                  sustain = (127-msg.value)/127;
-                  if(sustain==0){stopSustain();}
-                  break;
-              case 65:
-                  sostenuto = (127-msg.value)/127;
-                  if(sostenuto==0){stopSostenuto();}
-                  if(sostenuto==1){startSostenuto();}
-                  break;
-              case 64:
-                  sostenutoFreeze = (127-msg.value)/127;
-                  if(sostenutoFreeze==0){stopSostenutoFreeze();}
-                  if(sostenutoFreeze==1){startSostenutoFreeze();}
-                  break;
+          cout << ofToString(msg.control) << endl;
+          switch(midiMapByValue[msg.control]){
+            case MidiCommand::fade_in:
+              fade_in = (float)msg.value/127.0*3;
+              cout << "fade_in:" << fade_in << endl;
+              break;
+      			case MidiCommand::fade_out:
+              fade_out = (float)msg.value/127.0*3;
+              cout << "fade_out:" << fade_out << endl;
+
+              break;
+      			case MidiCommand::global_speed:
+              changeAllSpeed((float) msg.value/16383);
+              cout << "speed" << endl;
+
+              break;
+      			case MidiCommand::layout_change:
+              cout << "layout" << endl;
+
+              layout = round(msg.value/(127/N_LAYOUTS/2))-N_LAYOUTS;
+              break;
+      			case MidiCommand::saturation:
+              // TODO: not implemented
+              break;
+      			case MidiCommand::sustain:
+              cout << "sustain" << endl;
+              sustain = (127-msg.value)/127;
+              if(sustain==0){stopSustain();}
+              break;
+      			case MidiCommand::sostenuto:
+              cout << "sostenuto" << endl;
+              sostenuto = (127-msg.value)/127;
+              if(sostenuto==0){stopSostenuto();}
+              if(sostenuto==1){startSostenuto();}
+              break;
+      			case MidiCommand::sostenuto_freeze:
+            cout << "sostenutoFreeze" << endl;
+              sostenutoFreeze = (127-msg.value)/127;
+              if(sostenutoFreeze==0){stopSostenutoFreeze();}
+              if(sostenutoFreeze==1){startSostenutoFreeze();}
+              break;
+      			case MidiCommand::dynamics_switch:
+              isDynamic = !isDynamic;
+              ofLogVerbose("dynamics_switch: " + ofToString(isDynamic));
+              break;
+      			case MidiCommand::fade_switch:
+              isFading = !isFading;
+              ofLogVerbose("fading_switch: " + ofToString(isFading));
+              break;
+      			case MidiCommand::blending_multiply_switch:
+              cout << "multiply" << endl;
+              blending_multiply = !blending_multiply;
+              break;
+      			case MidiCommand::source_shuffle_switch:
+              // TODO: not implemented
+              break;
+      	  	case MidiCommand::sustain_mode:
+              // TODO: not implemented
+              break;
+            midiMaxVal = 127; // reset maxVal to control
           }
-      
       break;
     default:
       cout << ofToString(msg.deltatime) << " ) " << msg.getStatusString(msg.status) << " " <<ofToString(((int)msg.pitch)-21) << " " << ofToString(msg.control) << " " << ofToString(msg.value) << endl;
       break;
     };
 
-	
+
 }
 
 //--------------------------------------------------------------
