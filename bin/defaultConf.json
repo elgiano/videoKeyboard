@@ -16,6 +16,7 @@
   },
   "mappings":{
       "first_midinote": 21,
+      "midi_port": 0,
       "fade_in": 22,
       "fade_out": 23,
       "global_speed": -1,

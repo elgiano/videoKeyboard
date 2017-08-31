@@ -10,6 +10,7 @@ import json
 from pprint import pprint
 from sys import exc_info
 import re
+from rtmidi.midiutil import open_midiinput
 
 class LayoutSelectorGroup(Gtk.HBox):
 
@@ -784,6 +785,10 @@ class MyWindow(Gtk.Window):
         self.selectedSet = None
         self.selectedGroup = None
 
+        self.midi_port = 0
+        self.midiLearnField = None
+        self.initMidi()
+
         self.configs = []
         self.setsDir = self.loadLastSetDir()
 
@@ -1108,7 +1113,6 @@ class MyWindow(Gtk.Window):
             # update gui
             self.groupsListStore[treepath][1] = newName
 
-
     # MIDI MAPPING dialog
     def midiMappingDialog(self,*argv):
         dialog = Gtk.Dialog("MIDI Mapping",self)
@@ -1148,10 +1152,41 @@ class MyWindow(Gtk.Window):
         self.midiListStore[path][2] = int(newValue)
         # update config
         self.selectedConf()["mappings"][self.midiListStore[path][0]] = int(newValue)
-        print(self.selectedConf()["mappings"])
+
+        if self.midiListStore[path][0] == "midi_port":
+            self.changeMidiPort(int(newValue))
+
+        self.midiLearnField = None
+
+    # MIDI
+
+    def initMidi(self):
+        self.midi_in, port = open_midiinput(self.midi_port)
+        self.midi_in.set_callback(self.midiCallback)
+
+    def changeMidiPort(self,port):
+        self.midi_port = port
+        self.midi_in.close_port()
+        self.midi_in.open_port(self.midi_port)
+        self.midi_in.set_callback(self.midiCallback)
+
+    # MIDI LEARN
 
     def midiLearn(self,renderer,spinButton,path):
-        print(path)
+        self.midiLearnField = spinButton
+
+    def midiCallback(self,event,data):
+        data = event[0]
+        if self.midiLearnField:
+            if data[0] == 144 or data[0] == 176:
+                GObject.idle_add(self.midiLearnAsyncUpdate, int(data[1]))
+            if data[0] == 224:
+                GObject.idle_add(self.midiLearnAsyncUpdate, -1)
+
+    # do gui operations async from midi thread
+    def midiLearnAsyncUpdate(self,value):
+        self.midiLearnField.set_value(value)
+
 
     def on_destroy(self,*argv):
         self.saveSetDir()
