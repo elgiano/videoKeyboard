@@ -29,6 +29,7 @@
       "fade_switch": 25,
       "blending_multiply_switch": 26,
       "source_shuffle_switch": 27,
-      "sustain_mode": 28
+      "sustain_mode": 28,
+      "loop_mode":29
   }
 }

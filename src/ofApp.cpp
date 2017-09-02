@@ -19,6 +19,8 @@ void ofApp::setup(){
   speed = 1.0;
   layout = 0;
 
+  saturation = 255;
+
   n_captures = 0;
   n_videos = 0;
 
@@ -28,6 +30,7 @@ void ofApp::setup(){
 
   //scanDataDir();
   findConfig();
+  sustain_mode = 0;
   midiMaxVal = 127;
   setupMidi();
 
@@ -442,11 +445,17 @@ void ofApp::drawVideoInLayout(int movieN){
         fi_alpha = (movie[movieN].getPosition()-startPos[movieN])*movie[movieN].getDuration();
         fi_alpha = fi_alpha/fade_in;fi_alpha = fi_alpha <= 0 ? 0 : fi_alpha >= 1 ? 1 : fi_alpha;
     }
+    // sound fade in
+    /*float vol = (movie[movieN].getPosition()-startPos[movieN])*movie[movieN].getDuration();
+    vol = vol/0.1;vol = vol <= 0 ? 0 : vol >= 1 ? 1 : vol;
+    movie[movieN].setVolume(vol);
+    cout << vol <<endl;*/
+
     // fade out
     //ofLogVerbose() << "fo " << ofToString(fo_start[movieN]);
     float fo_alpha = 1;
     // if fade_out is 0 or fade switch is off, and video was already stopped, deactivate it
-    // the real stopping of videos happens here for threading sake
+    // the real stopping of vfi_alphaideos happens here for threading sake
     if((fade_out==0 || !isFading) && fo_start[movieN] > 0){
         {deactivateVideo(movieN);fo_start[movieN] = 0.0;return;}
     }else if(fo_start[movieN] > 0 && fade_out>0 && isFading){
@@ -469,7 +478,6 @@ void ofApp::drawVideoInLayout(int movieN){
   }
 
   //cout <<  ofToString(thisLayoutInit[0]) <<  ofToString(thisLayoutInit[1])<<  ofToString(thisLayoutInit[2])<< endl;
-
   // blending_multiply handling
   if(blending_multiply){
     // the background video is added, the rest are multiplied
@@ -481,13 +489,17 @@ void ofApp::drawVideoInLayout(int movieN){
       ofEnableBlendMode(OF_BLENDMODE_MULTIPLY);
       //cout << ofToString(thisLayoutInit[layoutPos])<< " pos"<< ofToString(layoutPos) << endl;
     }
-    ofSetColor(255,255,255,255*fi_alpha*fo_alpha*thisDyn);
+    videoColor.set(255,255,255,255*fi_alpha*fo_alpha*thisDyn);
+    //ofSetColor(255,255,255,255*fi_alpha*fo_alpha*thisDyn);
   }else{
     // alpha blending:
     ofEnableAlphaBlending();
     // logarithmic layering * fade_in_transparency * fade_out_transparency * dynamic level
-    ofSetColor(255,255,255,255/log2(layoutCount[abs(layout)][layoutPos]+2)*fi_alpha*fo_alpha*thisDyn);
+    videoColor.set(255,255,255,255/log2(layoutCount[abs(layout)][layoutPos]+2)*fi_alpha*fo_alpha*thisDyn);
+    //ofSetColor(255,255,255,255/log2(layoutCount[abs(layout)][layoutPos]+2)*fi_alpha*fo_alpha*thisDyn);
   }
+  //videoColor.setSaturation(saturation);
+  ofSetColor(videoColor);
 
   //ofLogVerbose() << "layout count " << ofToString(layoutCount[abs(layout)][layoutPos]) ;
   //ofLogVerbose() << "fi/fo " << ofToString(fi_alpha) << "/" <<  ofToString(fo_alpha);
@@ -503,6 +515,14 @@ void ofApp::drawVideoInLayout(int movieN){
         w = movie[movieN].getWidth();
         h = movie[movieN].getHeight();
     }
+
+    /*ofPixels pixels;
+    thisTexture.readToPixels(pixels);
+    for(auto & pixel:  pixels.getPixelsIter()){
+      cout << ofToString(pixel.getColor()) << endl;
+    }
+    thisTexture.loadData(pixels,GL_RBGA);*/
+
 
   // actual drawing in layout
   switch(abs(layout)){
@@ -566,6 +586,8 @@ void ofApp::draw(){
   for(int i=0;i<MAX_VIDEOS;i++){
     if(active_videos[i] or sostenuto_videos[i] or sostenutoFreeze_videos[i]){
       //ofLogVerbose() << "drawing " + ofToString(i);
+      /*movie[i].setLoopState(loopState);
+      cout << movie[i].getLoopState() << endl;*/
       drawVideoInLayout(i);
       //ofLogVerbose() << "drawn " + ofToString(i);
     }
@@ -782,12 +804,30 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
               cout << "layout " << ofToString(layout)<< endl;
               break;
       			case MidiCommand::saturation:
-              // TODO: not implemented
+              saturation = (int)round((float)msg.value/midiMaxVal*255*2);
+              cout << "saturation " << ofToString(saturation)<< endl;
+
               break;
       			case MidiCommand::sustain:
               cout << "sustain" << endl;
-              sustain = (midiMaxVal-msg.value)/midiMaxVal;
-              if(sustain==0){stopSustain();}
+              switch (sustain_mode) {
+                case 0:
+                  sustain = (midiMaxVal-msg.value)/midiMaxVal;
+                  if(sustain==0){stopSustain();};
+                  break;
+                case 1:
+                  cout << "sostenuto" << endl;
+                  sostenuto = (midiMaxVal-msg.value)/midiMaxVal;
+                  if(sostenuto==0){stopSostenuto();}
+                  if(sostenuto==1){startSostenuto();}
+                  break;
+                case 2:
+                  cout << "sostenutoFreeze" << endl;
+                  sostenutoFreeze = (midiMaxVal-msg.value)/midiMaxVal;
+                  if(sostenutoFreeze==0){stopSostenutoFreeze();}
+                  if(sostenutoFreeze==1){startSostenutoFreeze();}
+                  break;
+              }
               break;
       			case MidiCommand::sostenuto:
               cout << "sostenuto" << endl;
@@ -796,7 +836,7 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
               if(sostenuto==1){startSostenuto();}
               break;
       			case MidiCommand::sostenuto_freeze:
-            cout << "sostenutoFreeze" << endl;
+              cout << "sostenutoFreeze" << endl;
               sostenutoFreeze = (midiMaxVal-msg.value)/midiMaxVal;
               if(sostenutoFreeze==0){stopSostenutoFreeze();}
               if(sostenutoFreeze==1){startSostenutoFreeze();}
@@ -817,10 +857,26 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
               // TODO: not implemented
               break;
       	  	case MidiCommand::sustain_mode:
-              // TODO: not implemented
+              sustain_mode = (int)round((float)msg.value/(midiMaxVal/2));
               break;
-            midiMaxVal = 127; // reset maxVal to control
+      	  	case MidiCommand::loop_mode:
+              switch((int)round((float)msg.value/(midiMaxVal/2))){
+                case 0:
+                  cout << "loop none"<< endl;
+                  loopState = OF_LOOP_NONE;
+                  break;
+                case 1:
+                  cout << "loop normal" << endl;
+                  loopState = OF_LOOP_NORMAL;
+                  break;
+                case 2:
+                  cout << "loop rev" << endl;
+                  loopState = OF_LOOP_PALINDROME;
+                  break;
+              }
+              break;
           }
+      midiMaxVal = 127; // reset maxVal to control
       break;
     default:
       cout << ofToString(msg.deltatime) << " ) " << msg.getStatusString(msg.status) << " " <<ofToString(((int)msg.pitch)-21) << " " << ofToString(msg.control) << " " << ofToString(msg.value) << endl;

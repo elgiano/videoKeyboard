@@ -22,13 +22,18 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 
 		int max_videos;
 		int first_midinote;
-        int midi_port;
+    int midi_port;
 		float fade_in;
 		float fade_out;
+		int sustain_mode;
+		int saturation;
 
 		bool blending_multiply;
 		bool isDynamic = false;
 		bool isFading = true;
+
+		ofLoopType loopState = OF_LOOP_NORMAL;
+		ofColor videoColor;
 
 		void newMidiMessage(ofxMidiMessage& eventArgs);
 		ofxMidiIn midiIn;
@@ -134,7 +139,8 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 			fade_switch,
 			blending_multiply_switch,
 			source_shuffle_switch,
-			sustain_mode
+			sustain_mode,
+			loop_mode
 		};
 
 		std::map<string, MidiCommand> midiMappingsStringsToCommand = {
@@ -150,7 +156,9 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		 {"fade_switch", MidiCommand::fade_switch},
 		 {"blending_multiply_switch", MidiCommand::blending_multiply_switch},
 		 {"source_shuffle_switch", MidiCommand::source_shuffle_switch},
-		 {"sustain_mode", MidiCommand::sustain_mode }
+		 {"sustain_mode", MidiCommand::sustain_mode },
+		 {"loop_mode", MidiCommand::loop_mode }
+
 		};
 
 		std::map<string, int> midiMappings = {
@@ -166,7 +174,9 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		 {"fade_switch", 25},
 		 {"blending_multiply_switch", 26},
 		 {"source_shuffle_switch", 27},
-		 {"sustain_mode", 28 }
+		 {"sustain_mode", 28 },
+		 {"loop_mode", 29 }
+
 		};
 
 
