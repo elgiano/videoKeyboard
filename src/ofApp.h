@@ -31,6 +31,10 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		bool blending_multiply;
 		bool isDynamic = false;
 		bool isFading = true;
+		bool dynIsSpeed = false;
+
+		float dynDecay = 0.98;
+		float dynToSpeed(int movieN);
 
 		ofLoopType loopState = OF_LOOP_NORMAL;
 		ofColor videoColor;

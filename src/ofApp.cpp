@@ -12,7 +12,8 @@
 void ofApp::setup(){
 
   ofSetLogLevel(OF_LOG_VERBOSE);
-
+  ofLogToFile("log.txt");
+  
   screenW = ofGetScreenWidth();
   screenH = ofGetScreenHeight();
 
@@ -606,7 +607,11 @@ void ofApp::update(){
             if(isCaptureKey(i)){
                 captureFromKey(i).update();
             }else{
-              movie[i].setSpeed(speed*tapSpeed[i]);
+              if(dynIsSpeed){
+                movie[i].setSpeed(speed*tapSpeed[i]*dynToSpeed(i));
+              }else{
+                movie[i].setSpeed(speed*tapSpeed[i]);
+              }
               if(sostenutoFreeze_videos[i]){
                   movie[i].setPaused(true);
                   //cout << i <<" paused" <<endl;
@@ -697,6 +702,15 @@ void ofApp::changeAllSpeed(float control){
   float scaled =pow(3,2*control-1);
   speed = scaled;
   //cout << "scaled: "<< ofToString(scaled) << endl;
+}
+
+float ofApp::dynToSpeed(int movieN){
+  dyn[movieN] *= dynDecay;
+  if(fo_start[movieN] > 0 && !sustained_videos[movieN] && !sostenuto_videos[movieN] && !sostenutoFreeze_videos[movieN]){
+      dyn[movieN] *= dynDecay;
+  }
+  //cout <<dyn[movieN]<<endl;
+  return dyn[movieN];
 }
 
 float ofApp::tapToSpeed(float t,int k){
