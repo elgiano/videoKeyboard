@@ -1,8 +1,8 @@
 {
   "general":{
     "max_videos": 88,
-    "fade_in": 1.5,
-    "fade_out": 1.5,
+    "fade_in": 0,
+    "fade_out": 0.5,
     "blending_multiply": false
   },
   "sources":{

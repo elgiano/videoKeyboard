@@ -13,7 +13,7 @@ void ofApp::setup(){
 
   ofSetLogLevel(OF_LOG_VERBOSE);
   ofLogToFile("log.txt");
-  
+
   screenW = ofGetScreenWidth();
   screenH = ofGetScreenHeight();
 
