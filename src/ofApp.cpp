@@ -530,7 +530,7 @@ void ofApp::update(){
               }
               if(reset_videos[i]){
                   cout << "reset " << i << endl;
-                  //reset_videos[i] = false;
+                  reset_videos[i] = false;
                   movie[i].setPosition(startPos[i]);
                   movie[i].play();
                   continue;
