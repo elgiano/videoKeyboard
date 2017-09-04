@@ -32,7 +32,8 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		bool isDynamic = false;
 		bool isFading = true;
 		bool dynIsSpeed = false;
-        bool layoutShuffle = false;
+		bool dynIsDecaying = false;
+    bool layoutShuffle = false;
 
 		float dynDecay = 0.98;
 		float dynToSpeed(int movieN);
@@ -151,6 +152,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 			sustain_mode,
 			loop_mode,
             speed_dynamics,
+						dynamics_decay,
             layout_shuffle
 		};
 
@@ -170,7 +172,8 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		 {"sustain_mode", MidiCommand::sustain_mode },
 		 {"loop_mode", MidiCommand::loop_mode },
          {"speed_dynamics", MidiCommand::speed_dynamics },
-         {"layout_shuffle", MidiCommand::layout_shuffle }
+         {"layout_shuffle", MidiCommand::layout_shuffle },
+         {"dynamics_decay", MidiCommand::dynamics_decay }
 
 		};
 
@@ -190,7 +193,8 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		 {"sustain_mode", 28 },
 		 {"loop_mode", 29 },
          {"speed_dynamics", 30 },
-         {"layout_shuffle", 31 }
+         {"layout_shuffle", 31 },
+         {"dynamics_decay", 32 }
 
 		};
 

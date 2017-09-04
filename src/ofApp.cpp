@@ -371,7 +371,7 @@ void ofApp::drawVideoInLayout(int movieN){
         fo_alpha = fo_alpha <= 0 ? 0 : fo_alpha >= 1 ? 1 : fo_alpha;
       }
     }
-    
+
 
   // read layout position
   int layoutPos=0;
@@ -506,7 +506,7 @@ void ofApp::draw(){
 
 //--------------------------------------------------------------
 void ofApp::update(){
-  if(dynIsSpeed && ofGetElapsedTimef()-lastDecayTime>0.1){
+  if(dynIsDecaying && ofGetElapsedTimef()-lastDecayTime>0.1){
     decayDyn();
     lastDecayTime = ofGetElapsedTimef();
   }
@@ -529,15 +529,15 @@ void ofApp::update(){
                   movie[i].setPaused(true);
               }
               if(reset_videos[i]){
-                   cout << "reset " << i << endl;
-                    reset_videos[i] = false;
+                  cout << "reset " << i << endl;
+                  //reset_videos[i] = false;
                   movie[i].setPosition(startPos[i]);
                   movie[i].play();
                   continue;
-                  
+
                }
               //cout << dyn[i] << endl;
-              
+
               movie[i].update();
             }
             //ofLogVerbose() << "updated "+ofToString(i)+ofToString(active_videos[i]);
@@ -574,7 +574,7 @@ void ofApp::playVideo(int key, float vel){
       tapToSpeed(now-tapTempo[key],key);
       tapTempo[key] = now;
     }else{
-     
+
       reset_videos[key] = true;
     }
 
@@ -626,7 +626,7 @@ void ofApp::stopVideo(int key){
 }
 
 void ofApp::changeAllSpeed(float control){
-  float scaled =pow(3,2*control-1);
+  float scaled =pow(3,ofMap(control,0,1,-2,2));
   speed = scaled;
   //cout << "scaled: "<< ofToString(scaled) << endl;
 }
@@ -637,7 +637,7 @@ float ofApp::dynToSpeed(int movieN){
       dyn[movieN] *= dynDecay;
   }*/
   //cout <<dyn[movieN]<<endl;
-  return dyn[movieN];
+  return pow(3,ofMap(dyn[movieN],0,1,-2,2));
 }
 
 void ofApp::decayDyn(){
@@ -654,7 +654,7 @@ void ofApp::decayDyn(){
 float ofApp::tapToSpeed(float t,int k){
   float newSpeed = 1.0;
   if(t>0 && t<= 10){
-    newSpeed = 1.0/t;
+    newSpeed = 1.0/ofMap(t,0.2,10,0.01,50);
   }
   tapSpeed[k] = newSpeed;
   //cout << ofToString(tapSpeed[k]) << endl;
@@ -834,6 +834,10 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
               case MidiCommand::layout_shuffle:
                   cout << "layout shuffle" << endl;
                   layoutShuffle = !layoutShuffle;
+                  break;
+              case MidiCommand::dynamics_decay:
+                  cout << "dynDecay" << endl;
+                  dynIsDecaying = !dynIsDecaying;
                   break;
           }
       midiMaxVal = 127; // reset maxVal to control
