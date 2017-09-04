@@ -32,6 +32,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		bool isDynamic = false;
 		bool isFading = true;
 		bool dynIsSpeed = false;
+        bool layoutShuffle = false;
 
 		float dynDecay = 0.98;
 		float dynToSpeed(int movieN);
@@ -148,7 +149,9 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 			blending_multiply_switch,
 			source_shuffle_switch,
 			sustain_mode,
-			loop_mode
+			loop_mode,
+            speed_dynamics,
+            layout_shuffle
 		};
 
 		std::map<string, MidiCommand> midiMappingsStringsToCommand = {
@@ -165,7 +168,9 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		 {"blending_multiply_switch", MidiCommand::blending_multiply_switch},
 		 {"source_shuffle_switch", MidiCommand::source_shuffle_switch},
 		 {"sustain_mode", MidiCommand::sustain_mode },
-		 {"loop_mode", MidiCommand::loop_mode }
+		 {"loop_mode", MidiCommand::loop_mode },
+         {"speed_dynamics", MidiCommand::speed_dynamics },
+         {"layout_shuffle", MidiCommand::layout_shuffle }
 
 		};
 
@@ -183,7 +188,9 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		 {"blending_multiply_switch", 26},
 		 {"source_shuffle_switch", 27},
 		 {"sustain_mode", 28 },
-		 {"loop_mode", 29 }
+		 {"loop_mode", 29 },
+         {"speed_dynamics", 30 },
+         {"layout_shuffle", 31 }
 
 		};
 

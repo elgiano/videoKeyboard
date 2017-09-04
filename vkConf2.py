@@ -1,5 +1,5 @@
 #!/bin/python
-#/home/giano/projects/soren/videoKeyboardHap/bin/sets
+#/Users/sorenkjaergard/Documents/openFrameworks/apps/myApps/videoKeyboard-master/bin/sets
 
 from os import listdir, mkdir, symlink, remove, rename
 from os.path import isdir, isfile, join, getsize, abspath, isabs,realpath, basename
@@ -191,7 +191,10 @@ class MyWindow(Gtk.Window):
         f = open(abspath(__file__),"r")
         line = f.readlines()[1][1:].strip()
         f.close()
-        return (line)
+        if not isdir(line):
+            return("")
+        else:
+            return (line)
 
     def saveSetDir(self):
         with open(abspath(__file__),"r") as f:
@@ -791,6 +794,7 @@ class MyWindow(Gtk.Window):
 
         self.configs = []
         self.setsDir = self.loadLastSetDir()
+    
 
         Gtk.Window.__init__(self, title="VideoKeys Configuration")
         self.set_border_width(10)
@@ -986,8 +990,11 @@ class MyWindow(Gtk.Window):
         self.rightPanel.set_child_visible(False)
         self.layoutsGUI.set_child_visible(False)
 
-        self.changeSetDir(self.setsDir)
-        self.fillSetList()
+        if isdir(self.setsDir):
+            self.changeSetDir(self.setsDir)
+            self.fillSetList()
+        else:
+            self.selectSetDir()
 
 
     # lists interaction

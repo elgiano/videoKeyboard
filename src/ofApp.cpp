@@ -371,25 +371,18 @@ void ofApp::drawVideoInLayout(int movieN){
         fo_alpha = fo_alpha <= 0 ? 0 : fo_alpha >= 1 ? 1 : fo_alpha;
       }
     }
-    /*if((fade_out==0 || !isFading) && fo_start[movieN] > 0){
-        {deactivateVideo(movieN);fo_start[movieN] = 0.0;return;}
-    }else if(fo_start[movieN] > 0 && fade_out>0 && isFading){
-      // otherwise update the fade out
-      fo_alpha = ofGetElapsedTimef()-fo_start[movieN];
-      // kill video if fade ended
-      if(fo_alpha>=fade_out){deactivateVideo(movieN);fo_start[movieN] = 0.0;return;}
-
-      fo_alpha = 1-(fo_alpha/fade_out);
-      fo_alpha = fo_alpha <= 0 ? 0 : fo_alpha >= 1 ? 1 : fo_alpha;
-
-   }*/
+    
 
   // read layout position
   int layoutPos=0;
+  int thisLayout = layout_for_video[movieN];
+    if(layoutShuffle){
+        thisLayout = movieN % n_layouts;
+    }
   if(layout>0 || layout < (-2)){
-    layoutPos = layoutConf[layout_for_video[movieN]][abs(layout)-1];
+    layoutPos = layoutConf[thisLayout][abs(layout)-1];
   }else if(layout<0){
-    layoutPos = abs(layoutConf[layout_for_video[movieN]][abs(layout)-1]-1);
+    layoutPos = abs(layoutConf[thisLayout][abs(layout)-1]-1);
   }
 
   //cout <<  ofToString(thisLayoutInit[0]) <<  ofToString(thisLayoutInit[1])<<  ofToString(thisLayoutInit[2])<< endl;
@@ -513,10 +506,10 @@ void ofApp::draw(){
 
 //--------------------------------------------------------------
 void ofApp::update(){
-  /*if(ofGetElapsedTimef()-lastDecayTime>0.1){
+  if(dynIsSpeed && ofGetElapsedTimef()-lastDecayTime>0.1){
     decayDyn();
     lastDecayTime = ofGetElapsedTimef();
-  }*/
+  }
   for(int i=0;i<MAX_VIDEOS;i++){
     if(active_videos[i] or sostenuto_videos[i] or sostenutoFreeze_videos[i]){
         if(!movie[i].isPlaying()){
@@ -536,12 +529,16 @@ void ofApp::update(){
                   movie[i].setPaused(true);
               }
               if(reset_videos[i]){
-                movie[i].setPosition(startPos[i]);
-                reset_videos[i] = false;
-              }
+                   cout << "reset " << i << endl;
+                    reset_videos[i] = false;
+                  movie[i].setPosition(startPos[i]);
+                  movie[i].play();
+                  continue;
+                  
+               }
               //cout << dyn[i] << endl;
-              if(movie[i].isFrameNew()){
-              movie[i].update();}
+              
+              movie[i].update();
             }
             //ofLogVerbose() << "updated "+ofToString(i)+ofToString(active_videos[i]);
         }
@@ -577,6 +574,7 @@ void ofApp::playVideo(int key, float vel){
       tapToSpeed(now-tapTempo[key],key);
       tapTempo[key] = now;
     }else{
+     
       reset_videos[key] = true;
     }
 
@@ -829,6 +827,14 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
                   break;
               }
               break;
+              case MidiCommand::speed_dynamics:
+                  cout << "dynIsSpeed" << endl;
+                  dynIsSpeed = !dynIsSpeed;
+                  break;
+              case MidiCommand::layout_shuffle:
+                  cout << "layout shuffle" << endl;
+                  layoutShuffle = !layoutShuffle;
+                  break;
           }
       midiMaxVal = 127; // reset maxVal to control
       break;
