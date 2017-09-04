@@ -35,6 +35,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 
 		float dynDecay = 0.98;
 		float dynToSpeed(int movieN);
+		void decayDyn();
 
 		ofLoopType loopState = OF_LOOP_NORMAL;
 		ofColor videoColor;
@@ -112,9 +113,11 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 
 		bool active_videos[MAX_VIDEOS];
 
+		bool reset_videos[MAX_VIDEOS] = {false};
+
 		bool sustained_videos[MAX_VIDEOS];
-        bool sostenuto_videos[MAX_VIDEOS];
-        bool sostenutoFreeze_videos[MAX_VIDEOS];
+    bool sostenuto_videos[MAX_VIDEOS];
+    bool sostenutoFreeze_videos[MAX_VIDEOS];
 
 
 		float fo_start[MAX_VIDEOS];
@@ -125,6 +128,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 
 		float startPos[MAX_VIDEOS];
 
+		float lastDecayTime;
 		// keep track of n_activeVideos for volume settings
 		int n_activeVideos;
 		float volume;

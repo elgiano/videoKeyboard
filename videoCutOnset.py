@@ -12,6 +12,8 @@ extension = os.path.splitext(name)[1]
 os.system("ffmpeg -i "+sys.argv[1]+" -map 0:a "+name+".audio.wav -map 0:v "+name+".onlyvideo.avi")
 os.system("rm "+name+".onlyvideo.avi")
 os.system("aubiocut "+name+".audio.wav > "+name+".onsets")
+os.system("aubiocut -S  "+name+".audio.wav > "+name+".onsets")
+
 os.system("rm "+name+".audio.wav")
 
 f = open(name+".onsets","r"); o = [float(line) for line in f.readlines()];

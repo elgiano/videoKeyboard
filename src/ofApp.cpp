@@ -21,6 +21,8 @@ void ofApp::setup(){
   layout = 0;
 
   saturation = 255;
+  lastDecayTime = 0;
+
 
   n_captures = 0;
   n_videos = 0;
@@ -36,7 +38,9 @@ void ofApp::setup(){
   setupMidi();
 
   ofBackground(0,0,0);
+  //ofBackground(255,255,255);
   ofEnableAlphaBlending();
+  ofSetFrameRate(120);
 }
 
 // ####### CAPTURE  #########
@@ -83,109 +87,6 @@ void ofApp::findConfig(){
     loadConfigNew(dir.getPath(0));
   }
 }
-
-// TODO: remove this old function
-/*void ofApp::scanDataDir(){
-
-  ofDirectory dir(ofToDataPath(""));
-  // config file
-  dir.allowExt("json");
-  dir.listDir();
-  dir.sort();
-
-  if(dir.size()>0){
-    loadConfigNew(dir.getPath(0));
-  }else{
-    loadDefaultConfig();
-  }
-
-  // subdirs
-  dir.allowExt("");
-  dir.listDir();
-  dir.sort();
-
-  if(random){
-    loadRandom();
-  }else{
-    bool subdirs = false;
-    for(unsigned i=0;i<dir.size();i++){
-      if(dir.getFile(i).isDirectory()){subdirs=true;break;}
-    }
-
-    if(subdirs){
-      loadFolders();
-    }else{
-      // no subfolders: load videos in data/
-      loadDataDir();
-    }
-  }
-}
-
-
-void ofApp::loadConfig(string path){
-  Settings::get().load(path);
-  loadDefaultConfig();
-  if( Settings::get().exists("general")){
-      cout << "custom conf" << endl;
-      if(Settings::get().exists("general/first_midinote")){
-        first_midinote=Settings::getInt("general/first_midinote");
-      }
-      if(Settings::get().exists("general/midi_port")){
-          midi_port=Settings::getInt("general/midi_port");
-      }
-      if(Settings::get().exists("general/fade_in")){
-        fade_in=Settings::getFloat("general/fade_in");
-      }
-      if(Settings::get().exists("general/fade_out")){
-        fade_out=Settings::getFloat("general/fade_out");
-      }
-      if(Settings::get().exists("general/blending_multiply")){
-         blending_multiply=Settings::getBool("general/blending_multiply");
-      }
-      if(Settings::get().exists("general/random")){
-         random=Settings::getBool("general/random");
-      }
-  }
-  if(Settings::get().exists("folders")){
-    // count folders, init layoutConf
-    n_layouts = 0;
-    int thisFolder = 0;
-    while(Settings::get().exists("folders/"+std::to_string(thisFolder++))){
-      n_layouts++;
-    }
-
-    layoutConf = new int*[n_layouts];
-    cout << ofToString(n_layouts) <<" folders" << endl;
-
-    // for each, split the data in N_LAYOUT numbers
-    for(thisFolder = 0; thisFolder < n_layouts; thisFolder++){
-      std::vector<string> positions = ofSplitString(Settings::getString("folders/"+std::to_string(thisFolder)),",");
-      layoutConf[thisFolder] = new int[N_LAYOUTS];
-      for(unsigned j=0;j<positions.size() && j<N_LAYOUTS;j++){
-        layoutConf[thisFolder][j] = std::stoi(positions[j]);
-      }
-    }
-
-  }
-
-    if(Settings::get().exists("capture")){
-        // count folders, init layoutConf
-        n_captures = 0;
-        while(Settings::get().exists("capture/"+std::to_string(n_captures))){
-            capture_sources[n_captures] = Settings::getInt("capture/"+ofToString(n_captures));
-            if(Settings::get().exists("capture/layout/"+std::to_string(n_captures))){
-                capture_layouts[n_captures] =  Settings::getInt("capture/layout/"+ofToString(n_captures));
-            }
-
-            cout << "capture #" << ofToString(n_captures) << " device:" << ofToString(capture_sources[n_captures]) << endl;
-
-            n_captures++;
-        }
-        initCapture();
-    }
-
-
-}*/
 
 void ofApp::loadConfigNew(string path){
   Settings::get().load(path);
@@ -456,8 +357,21 @@ void ofApp::drawVideoInLayout(int movieN){
     //ofLogVerbose() << "fo " << ofToString(fo_start[movieN]);
     float fo_alpha = 1;
     // if fade_out is 0 or fade switch is off, and video was already stopped, deactivate it
-    // the real stopping of vfi_alphaideos happens here for threading sake
-    if((fade_out==0 || !isFading) && fo_start[movieN] > 0){
+    // the real stopping of videos happens here for threading sake
+    if(fo_start[movieN] > 0){
+      if(fade_out==0 || !isFading){
+        deactivateVideo(movieN);fo_start[movieN] = 0.0;return;
+      }else{
+        // otherwise update the fade out
+        fo_alpha = ofGetElapsedTimef()-fo_start[movieN];
+        // kill video if fade ended
+        if(fo_alpha>=fade_out){deactivateVideo(movieN);fo_start[movieN] = 0.0;return;}
+
+        fo_alpha = 1-(fo_alpha/fade_out);
+        fo_alpha = fo_alpha <= 0 ? 0 : fo_alpha >= 1 ? 1 : fo_alpha;
+      }
+    }
+    /*if((fade_out==0 || !isFading) && fo_start[movieN] > 0){
         {deactivateVideo(movieN);fo_start[movieN] = 0.0;return;}
     }else if(fo_start[movieN] > 0 && fade_out>0 && isFading){
       // otherwise update the fade out
@@ -468,7 +382,7 @@ void ofApp::drawVideoInLayout(int movieN){
       fo_alpha = 1-(fo_alpha/fade_out);
       fo_alpha = fo_alpha <= 0 ? 0 : fo_alpha >= 1 ? 1 : fo_alpha;
 
-   }
+   }*/
 
   // read layout position
   int layoutPos=0;
@@ -586,17 +500,23 @@ void ofApp::draw(){
   // draw videos
   for(int i=0;i<MAX_VIDEOS;i++){
     if(active_videos[i] or sostenuto_videos[i] or sostenutoFreeze_videos[i]){
+      //if(movie[i].isFrameNew()){
       //ofLogVerbose() << "drawing " + ofToString(i);
       /*movie[i].setLoopState(loopState);
       cout << movie[i].getLoopState() << endl;*/
       drawVideoInLayout(i);
       //ofLogVerbose() << "drawn " + ofToString(i);
+      //}
     }
   }
 }
 
 //--------------------------------------------------------------
 void ofApp::update(){
+  /*if(ofGetElapsedTimef()-lastDecayTime>0.1){
+    decayDyn();
+    lastDecayTime = ofGetElapsedTimef();
+  }*/
   for(int i=0;i<MAX_VIDEOS;i++){
     if(active_videos[i] or sostenuto_videos[i] or sostenutoFreeze_videos[i]){
         if(!movie[i].isPlaying()){
@@ -614,9 +534,14 @@ void ofApp::update(){
               }
               if(sostenutoFreeze_videos[i]){
                   movie[i].setPaused(true);
-                  //cout << i <<" paused" <<endl;
               }
-              movie[i].update();
+              if(reset_videos[i]){
+                movie[i].setPosition(startPos[i]);
+                reset_videos[i] = false;
+              }
+              //cout << dyn[i] << endl;
+              if(movie[i].isFrameNew()){
+              movie[i].update();}
             }
             //ofLogVerbose() << "updated "+ofToString(i)+ofToString(active_videos[i]);
         }
@@ -642,15 +567,19 @@ void ofApp::playVideo(int key, float vel){
     dyn[key] = vel;
     fo_start[key] = 0;
 
-      if(!active_videos[key]){
-          active_videos[key] = true;
-          n_activeVideos++;
-      }else if(sustain>0){
+    if(!active_videos[key]){
+      active_videos[key] = true;
+      reset_videos[key] = true;
+      n_activeVideos++;
+    }else if(sustain>0){
       // if video is already active and sustain is on (tapping)
       float now = ofGetElapsedTimef();
       tapToSpeed(now-tapTempo[key],key);
       tapTempo[key] = now;
+    }else{
+      reset_videos[key] = true;
     }
+
     sustained_videos[key] = false;
     sostenuto_videos[key] = false;
     sostenutoFreeze_videos[key] = false;
@@ -661,7 +590,7 @@ void ofApp::playVideo(int key, float vel){
 void ofApp::deactivateVideo(int key){
   fo_start[key] = 0.0;
   active_videos[key] = false;
-  cout << "deactivating " << ofToString(key) << endl;
+  //cout << "deactivating " << ofToString(key) << endl;
 
   // now the actual stop method is called by update()
   //movie[key].stop();
@@ -705,12 +634,23 @@ void ofApp::changeAllSpeed(float control){
 }
 
 float ofApp::dynToSpeed(int movieN){
-  dyn[movieN] *= dynDecay;
+  /*dyn[movieN] *= dynDecay;
   if(fo_start[movieN] > 0 && !sustained_videos[movieN] && !sostenuto_videos[movieN] && !sostenutoFreeze_videos[movieN]){
       dyn[movieN] *= dynDecay;
-  }
+  }*/
   //cout <<dyn[movieN]<<endl;
   return dyn[movieN];
+}
+
+void ofApp::decayDyn(){
+  for(int i=0;i<MAX_VIDEOS;i++){
+    dyn[i] *= dynDecay;
+    if(fo_start[i] > 0 && !sustained_videos[i] && !sostenuto_videos[i] && !sostenutoFreeze_videos[i]){
+        dyn[i] *= dynDecay;
+    }
+    dyn[i] = ofClamp(dyn[i],0.2,10);
+
+  }
 }
 
 float ofApp::tapToSpeed(float t,int k){
@@ -797,7 +737,7 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
       msg.control = -1;
       midiMaxVal = 16383; // set maxVal to pitchBend
     case MIDI_CONTROL_CHANGE:
-          cout << ofToString(msg.control) << endl;
+          //cout << ofToString(msg.control) << endl;
           switch(midiMapByValue[msg.control]){
             case MidiCommand::fade_in:
               fade_in = (float)msg.value/midiMaxVal*3;
