@@ -32,6 +32,8 @@
       "sustain_mode": 28,
       "loop_mode":29,
       "speed_dynamics": 30,
-      "layout_shuffle":31
+      "layout_shuffle":31,
+      "dynamics_decay":32,
+      "global_volume":33
   }
 }

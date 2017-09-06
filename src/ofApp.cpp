@@ -514,6 +514,7 @@ void ofApp::update(){
     if(active_videos[i] or sostenuto_videos[i] or sostenutoFreeze_videos[i]){
         if(!movie[i].isPlaying()){
             movie[i].setSpeed(speed*tapSpeed[i]);
+            movie[i].setVolume(volume);
             movie[i].setPosition(startPos[i]);
             movie[i].play();
         }else{
@@ -537,7 +538,7 @@ void ofApp::update(){
 
                }
               //cout << dyn[i] << endl;
-
+              movie[i].setVolume(volume);
               movie[i].update();
             }
             //ofLogVerbose() << "updated "+ofToString(i)+ofToString(active_videos[i]);
@@ -629,6 +630,12 @@ void ofApp::changeAllSpeed(float control){
   float scaled =pow(3,ofMap(control,0,1,-2,2));
   speed = scaled;
   //cout << "scaled: "<< ofToString(scaled) << endl;
+}
+
+void ofApp::changeAllVolume(float control){
+  float scaled =ofMap(control,0.0,1.0,0.01,10);
+  volume = scaled;
+  cout << control << " scaled: "<< ofToString(scaled) << endl;
 }
 
 float ofApp::dynToSpeed(int movieN){
@@ -838,6 +845,10 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
               case MidiCommand::dynamics_decay:
                   cout << "dynDecay" << endl;
                   dynIsDecaying = !dynIsDecaying;
+                  break;
+              case MidiCommand::global_volume:
+                  cout << "global_volume" << endl;
+                  changeAllVolume((float)msg.value/midiMaxVal);
                   break;
           }
       midiMaxVal = 127; // reset maxVal to control

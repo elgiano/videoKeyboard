@@ -83,6 +83,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		void deactivateVideo(int key);
 		void stopVideo(int key);
 		void changeAllSpeed(float control);
+		void changeAllVolume(float control);
 		float tapToSpeed(float t, int k);
 
 		void stopSustain();
@@ -133,7 +134,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		float lastDecayTime;
 		// keep track of n_activeVideos for volume settings
 		int n_activeVideos;
-		float volume;
+		float volume = 1.0;
 
 		string pitchBendFunc="global_speed";
 		enum class MidiCommand {
@@ -153,7 +154,8 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 			loop_mode,
             speed_dynamics,
 						dynamics_decay,
-            layout_shuffle
+            layout_shuffle,
+						global_volume
 		};
 
 		std::map<string, MidiCommand> midiMappingsStringsToCommand = {
@@ -173,7 +175,8 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		 {"loop_mode", MidiCommand::loop_mode },
          {"speed_dynamics", MidiCommand::speed_dynamics },
          {"layout_shuffle", MidiCommand::layout_shuffle },
-         {"dynamics_decay", MidiCommand::dynamics_decay }
+         {"dynamics_decay", MidiCommand::dynamics_decay },
+         {"global_volume", MidiCommand::global_volume }
 
 		};
 
@@ -194,7 +197,8 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		 {"loop_mode", 29 },
          {"speed_dynamics", 30 },
          {"layout_shuffle", 31 },
-         {"dynamics_decay", 32 }
+         {"dynamics_decay", 32 },
+         {"global_volume", 33 }
 
 		};
 
