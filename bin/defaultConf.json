@@ -34,6 +34,15 @@
       "speed_dynamics": 30,
       "layout_shuffle":31,
       "dynamics_decay":32,
-      "global_volume":33
+      "global_volume":33,
+      "dynamics_volume":34,
+      "switch_to_layout_0":35,
+      "switch_to_layout_1":36,
+      "switch_to_layout_2":37,
+      "switch_to_layout_3":38,
+      "switch_to_layout_4":39,
+      "switch_to_layout_5":40,
+      "stutter_mode":41,
+      "rms_normalize":42,
   }
 }

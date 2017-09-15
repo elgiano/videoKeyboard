@@ -1,6 +1,8 @@
 #pragma once
 
 #include <ctype.h>
+#include <fstream>
+
 #include "ofMain.h"
 #include "ofxMidi.h"
 #include "ofxJsonSettings.h"
@@ -32,8 +34,10 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		bool isDynamic = false;
 		bool isFading = true;
 		bool dynIsSpeed = false;
+		bool dynIsVolume = false;
 		bool dynIsDecaying = false;
     bool layoutShuffle = false;
+		bool rms_mode = true;
 
 		bool stutterMode = true;
 
@@ -79,7 +83,8 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		void loadSourceGroup(string path, int layout);
 		void loadCaptureGroup(int deviceID, int layout);
 		void loadRandomGroup(string path,int size);
-
+		std::map<string,float> readRms(string path);
+		void setVideoVolume(int key,float vol);
 
 		void playVideo(int key, float vel);
 		void deactivateVideo(int key);
@@ -125,11 +130,14 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
     bool sostenutoFreeze_videos[MAX_VIDEOS];
 
 
+
 		float fo_start[MAX_VIDEOS];
 
 		float tapTempo[MAX_VIDEOS];
 		float tapSpeed[MAX_VIDEOS];
 		float dyn[MAX_VIDEOS];
+		float videoVolume[MAX_VIDEOS];
+		float videoRms[MAX_VIDEOS];
 
 		float startPos[MAX_VIDEOS];
 		float stutterStart[MAX_VIDEOS];
@@ -161,11 +169,14 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
       layout_shuffle,
 			global_volume,
 			stutter_mode,
+			dynamics_volume,
+			rms_normalize,
 			switch_to_layout_0,
 			switch_to_layout_1,
 			switch_to_layout_2,
 			switch_to_layout_3,
-			switch_to_layout_4
+			switch_to_layout_4,
+			switch_to_layout_5
 		};
 
 		std::map<string, MidiCommand> midiMappingsStringsToCommand = {
@@ -188,11 +199,14 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
      {"dynamics_decay", MidiCommand::dynamics_decay },
      {"global_volume", MidiCommand::global_volume },
      {"stutter_mode", MidiCommand::stutter_mode },
+     {"dynamics_volume", MidiCommand::dynamics_volume },
+     {"rms_normalize", MidiCommand::rms_normalize },
      {"switch_to_layout_0", MidiCommand::switch_to_layout_0 },
      {"switch_to_layout_1", MidiCommand::switch_to_layout_1 },
      {"switch_to_layout_2", MidiCommand::switch_to_layout_2 },
      {"switch_to_layout_3", MidiCommand::switch_to_layout_3 },
-     {"switch_to_layout_4", MidiCommand::switch_to_layout_4 }
+     {"switch_to_layout_4", MidiCommand::switch_to_layout_4 },
+     {"switch_to_layout_5", MidiCommand::switch_to_layout_5 }
 
 
 		};
@@ -217,11 +231,14 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
      {"dynamics_decay", 32 },
      {"global_volume", 33 },
      {"stutter_mode", 34 },
+     {"dynamics_volume", 41 },
+     {"rms_normalize", 42 },
 		 {"switch_to_layout_0", 35},
      {"switch_to_layout_1", 36 },
      {"switch_to_layout_2", 37 },
      {"switch_to_layout_3", 38 },
-     {"switch_to_layout_4", 39}
+     {"switch_to_layout_4", 39},
+     {"switch_to_layout_5", 40}
 		};
 
 
@@ -232,7 +249,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		// 1: dual vertical (0-1)
 		// 2: dual horizontal (0-1)
 		// 3: triple 2+1 (0-2)
-        // 4: triptych (0-2)
+    // 4: triptych (0-2)
 		// 5: quad (0-3)
 
 		int layoutCount[N_LAYOUTS+1][MAX_LAYOUTPOS]={0};

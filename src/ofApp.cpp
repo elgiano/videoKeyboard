@@ -2,11 +2,9 @@
 
 // todo:
 // * start/stop audio; OK (latency?)
-// * try more videos (up to 88)
-// * video speed (mode and scale)
-// * midi input (connect dialog)
+// * stutter aftertouch
+// * source shuffle mode
 
-// multithread? control and playback!
 
 //--------------------------------------------------------------
 void ofApp::setup(){
@@ -250,25 +248,53 @@ void ofApp::initVideoVariables(int key){
   tapSpeed[key] = 1.0;
   fo_start[key] = 0;
   dyn[key] = 1;
+  videoVolume[key] = 1;
+  videoRms[key] = 1;
   startPos[key] = 0;
   stutterStart[key] = 0;
   stutterDur[key] = 0.1;
   movie[key].setLoopState(OF_LOOP_NORMAL);
 }
 
+std::map<string,float> ofApp::readRms(string path){
+  std::map<string,float> volumes;
+  std::ifstream infile(ofToDataPath(path+"/rms"));
+  string a;
+  float b;
+  while (infile >> a >> b)
+  {
+     cout << path+"/"+a << " rms " << b <<endl;
+     volumes[path+"/"+a] = b;
+  }
+  return volumes;
+
+}
+
 void ofApp::loadSourceGroup(string path,int layout){
     ofDirectory subdir(path);
+    subdir.allowExt("mov");
     subdir.listDir();
     subdir.sort();
     int tot_videos = subdir.size();
+    std::map<string,float> volumes;
+    // check rms file for clip volumes
+    if(ofFile(path+"/rms").isFile()){
+        volumes = readRms(path);
+    }
+
     for(int k=0;k<tot_videos && n_videos<MAX_VIDEOS;k++){
       if(ofFile(subdir.getPath(k)).isFile()){
         movie[n_videos].load(subdir.getPath(k));
         initVideoVariables(n_videos);
+        cout << subdir.getPath(k) << endl;
+        if(volumes[subdir.getPath(k)]>0){
+          videoRms[n_videos] = volumes[subdir.getPath(k)];
+        }
         layout_for_video[n_videos] = layout;
         n_videos++;
 
         cout << "Preloading " << n_videos  <<" "<< subdir.getPath(k)<< endl;
+
       }
     }
 }
@@ -329,10 +355,6 @@ void ofApp::loadRandom(){
 }
 */
 
-/*void ofApp::setVolume(){
-  volume = 1 - (n_activeVideos);
-}*/
-
 // ### DRAW ###
 
 void ofApp::drawVideoInLayout(int movieN){
@@ -351,11 +373,11 @@ void ofApp::drawVideoInLayout(int movieN){
         fi_alpha = fi_alpha/fade_in;fi_alpha = fi_alpha <= 0 ? 0 : fi_alpha >= 1 ? 1 : fi_alpha;
     }
     // sound fade in
-    if(((movie[movieN].getPosition()-startPos[movieN])*movie[movieN].getDuration())>0.1){
+    if(((movie[movieN].getPosition()-startPos[movieN])*movie[movieN].getDuration())<1.1){
       float vol = (movie[movieN].getPosition()-startPos[movieN])*movie[movieN].getDuration();
-      vol = vol/0.1;vol = vol <= 0 ? 0 : vol >= 1 ? 1 : vol;
-      movie[movieN].setVolume(vol);
-      cout << "test" << vol <<endl;
+      vol = vol/1.1;vol = vol <= 0 ? 0 : vol >= 1 ? 1 : vol;
+      setVideoVolume(movieN,vol);
+      cout << "volume" << vol <<endl;
     }
 
     // fade out
@@ -373,7 +395,11 @@ void ofApp::drawVideoInLayout(int movieN){
         if(fo_alpha>=fade_out){deactivateVideo(movieN);fo_start[movieN] = 0.0;return;}
 
         fo_alpha = 1-(fo_alpha/fade_out);
-        fo_alpha = fo_alpha <= 0 ? 0 : fo_alpha >= 1 ? 1 : fo_alpha;
+
+        //fo_alpha = fo_alpha <= 0 ? 0 : fo_alpha >= 1 ? 1 : fo_alpha;
+        // sound fade_out
+        setVideoVolume(movieN,fo_alpha);
+        cout << "volume" << fo_alpha <<endl;
       }
     }
 
@@ -519,7 +545,7 @@ void ofApp::update(){
     if(active_videos[i] or sostenuto_videos[i] or sostenutoFreeze_videos[i]){
         if(!movie[i].isPlaying()){
             movie[i].setSpeed(speed*tapSpeed[i]);
-            movie[i].setVolume(volume);
+            setVideoVolume(i,1);
             movie[i].setPosition(startPos[i]);
             movie[i].play();
         }else{
@@ -547,7 +573,8 @@ void ofApp::update(){
                  }
                }
               //cout << dyn[i] << endl;
-              movie[i].setVolume(volume);
+              setVideoVolume(i,1);
+              //movie[i].setVolume(volume*videoVolume[i]);
               movie[i].update();
             }
             //ofLogVerbose() << "updated "+ofToString(i)+ofToString(active_videos[i]);
@@ -556,13 +583,21 @@ void ofApp::update(){
   }
 }
 
+void ofApp::setVideoVolume(int key, float vol){
+  if(rms_mode){
+    movie[key].setVolume(vol*volume*videoVolume[key]/videoRms[key]);
+  }else{
+    movie[key].setVolume(vol*volume*videoVolume[key]);
+  }
+}
 // ### CONTROL ###
 
 void ofApp::panic(){
   for(int i=0;i<MAX_VIDEOS;i++){
     active_videos[i] = false;
-    movie[i].stop();
-    movie[i].setPosition(0);
+    //movie[i].stop();
+    deactivateVideo(i);
+    //movie[i].setPosition(0);
   }
 }
 
@@ -572,6 +607,7 @@ void ofApp::playVideo(int key, float vel){
   if(key>=0 && key < MAX_VIDEOS){
     // update dynamics and stop fade_out
     dyn[key] = vel;
+    if(dynIsVolume){videoVolume[key] = vel;};
     fo_start[key] = 0;
 
     if(!active_videos[key]){
@@ -755,6 +791,9 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
     case MIDI_NOTE_OFF:
       stopVideo(msg.pitch-first_midinote);
       break;
+    case MIDI_AFTERTOUCH:
+      cout << msg.value << endl;
+      break;
     case MIDI_PITCH_BEND:
       msg.control = -1;
       midiMaxVal = 16383; // set maxVal to pitchBend
@@ -864,8 +903,16 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
                   dynIsDecaying = !dynIsDecaying;
                   break;
               case MidiCommand::global_volume:
-                  cout << "global_volume" << endl;
                   changeAllVolume((float)msg.value/midiMaxVal);
+                  cout << "global_volume "<< volume << endl;
+                  break;
+              case MidiCommand::dynamics_volume:
+                  dynIsVolume = !dynIsVolume;
+                  cout << "dynIsVolume "<< dynIsVolume << endl;
+                  break;
+              case MidiCommand::rms_normalize:
+                  rms_mode = !rms_mode;
+                  cout << "rms_mode "<< rms_mode << endl;
                   break;
               case MidiCommand::stutter_mode:
                   stutterMode = !stutterMode;
@@ -889,6 +936,10 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
                   break;
               case MidiCommand::switch_to_layout_4:
                   layout = 4;
+                  cout << "layout " << ofToString(layout)<< endl;
+                  break;
+              case MidiCommand::switch_to_layout_5:
+                  layout = 5;
                   cout << "layout " << ofToString(layout)<< endl;
                   break;
           }

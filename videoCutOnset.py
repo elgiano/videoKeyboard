@@ -10,8 +10,7 @@ name = os.path.basename(file)
 extension = osq.path.splitext(name)[1]
 
 if not os.path.isfile(name+".onsets"):
-    os.system("ffmpeg -i "+sys.argv[1]+" -map 0:a "+name+".audio.wav -map 0:v "+name+".onlyvideo.avi")
-    os.system("rm "+name+".onlyvideo.avi")
+    os.system("ffmpeg -i "+sys.argv[1]+" -map 0:a "+name+".audio.wav")
     os.system("aubiocut "+name+".audio.wav > "+name+".onsets")
     os.system("rm "+name+".audio.wav")
 
