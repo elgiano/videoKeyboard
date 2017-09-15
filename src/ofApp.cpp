@@ -61,7 +61,8 @@ ofVideoGrabber ofApp::captureFromKey(int key){
     if(found != capture_keys+MAX_CAPTURE){
         key = std::distance(capture_keys,found);
         return capture[key];
-    }
+    };
+return capture[0];
 }
 
 bool ofApp::isCaptureKey (int key){
@@ -250,6 +251,8 @@ void ofApp::initVideoVariables(int key){
   fo_start[key] = 0;
   dyn[key] = 1;
   startPos[key] = 0;
+  stutterStart[key] = 0;
+  stutterDur[key] = 0.1;
   movie[key].setLoopState(OF_LOOP_NORMAL);
 }
 
@@ -348,10 +351,12 @@ void ofApp::drawVideoInLayout(int movieN){
         fi_alpha = fi_alpha/fade_in;fi_alpha = fi_alpha <= 0 ? 0 : fi_alpha >= 1 ? 1 : fi_alpha;
     }
     // sound fade in
-    /*float vol = (movie[movieN].getPosition()-startPos[movieN])*movie[movieN].getDuration();
-    vol = vol/0.1;vol = vol <= 0 ? 0 : vol >= 1 ? 1 : vol;
-    movie[movieN].setVolume(vol);
-    cout << vol <<endl;*/
+    if(((movie[movieN].getPosition()-startPos[movieN])*movie[movieN].getDuration())>0.1){
+      float vol = (movie[movieN].getPosition()-startPos[movieN])*movie[movieN].getDuration();
+      vol = vol/0.1;vol = vol <= 0 ? 0 : vol >= 1 ? 1 : vol;
+      movie[movieN].setVolume(vol);
+      cout << "test" << vol <<endl;
+    }
 
     // fade out
     //ofLogVerbose() << "fo " << ofToString(fo_start[movieN]);
@@ -526,16 +531,20 @@ void ofApp::update(){
               }else{
                 movie[i].setSpeed(speed*tapSpeed[i]);
               }
-              if(sostenutoFreeze_videos[i]){
+              /*if(sostenutoFreeze_videos[i]){
                   movie[i].setPaused(true);
-              }
+              }*/
               if(reset_videos[i]){
                   cout << "reset " << i << endl;
                   reset_videos[i] = false;
                   movie[i].setPosition(startPos[i]);
                   movie[i].play();
                   continue;
-
+               }
+               if(sostenutoFreeze_videos[i]){
+                 if(movie[i].getPosition()>=(stutterStart[i]+stutterDur[i])){
+                  movie[i].setPosition(stutterStart[i]);
+                 }
                }
               //cout << dyn[i] << endl;
               movie[i].setVolume(volume);
@@ -699,6 +708,14 @@ void ofApp::stopSostenuto(){
 void ofApp::startSostenutoFreeze(){
     sostenutoFreeze = 1;
     memcpy(sostenutoFreeze_videos,active_videos,MAX_VIDEOS);
+    for(int i=0;i<MAX_VIDEOS;i++){
+      if(sostenutoFreeze_videos[i]){
+        stutterStart[i] = movie[i].getPosition();
+        if(!stutterMode){
+          stutterDur[i] = 0;
+        }
+      }
+    }
 
 }
 
@@ -849,6 +866,30 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
               case MidiCommand::global_volume:
                   cout << "global_volume" << endl;
                   changeAllVolume((float)msg.value/midiMaxVal);
+                  break;
+              case MidiCommand::stutter_mode:
+                  stutterMode = !stutterMode;
+                  cout << "stutter_mode:" << stutterMode << endl;
+                  break;
+              case MidiCommand::switch_to_layout_0:
+                  layout = 0;
+                  cout << "layout " << ofToString(layout)<< endl;
+                  break;
+              case MidiCommand::switch_to_layout_1:
+                  layout = 1;
+                  cout << "layout " << ofToString(layout)<< endl;
+                  break;
+              case MidiCommand::switch_to_layout_2:
+                  layout = 2;
+                  cout << "layout " << ofToString(layout)<< endl;
+                  break;
+              case MidiCommand::switch_to_layout_3:
+                  layout = 3;
+                  cout << "layout " << ofToString(layout)<< endl;
+                  break;
+              case MidiCommand::switch_to_layout_4:
+                  layout = 4;
+                  cout << "layout " << ofToString(layout)<< endl;
                   break;
           }
       midiMaxVal = 127; // reset maxVal to control

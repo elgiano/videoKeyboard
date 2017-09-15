@@ -4,3 +4,4 @@ obj/
 src/.DS_Store
 aubiocut
 aubiocut.bak
+Makefile

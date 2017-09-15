@@ -35,6 +35,8 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		bool dynIsDecaying = false;
     bool layoutShuffle = false;
 
+		bool stutterMode = true;
+
 		float dynDecay = 0.98;
 		float dynToSpeed(int movieN);
 		void decayDyn();
@@ -130,6 +132,8 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		float dyn[MAX_VIDEOS];
 
 		float startPos[MAX_VIDEOS];
+		float stutterStart[MAX_VIDEOS];
+		float stutterDur[MAX_VIDEOS];
 
 		float lastDecayTime;
 		// keep track of n_activeVideos for volume settings
@@ -152,10 +156,16 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 			source_shuffle_switch,
 			sustain_mode,
 			loop_mode,
-            speed_dynamics,
-						dynamics_decay,
-            layout_shuffle,
-						global_volume
+      speed_dynamics,
+			dynamics_decay,
+      layout_shuffle,
+			global_volume,
+			stutter_mode,
+			switch_to_layout_0,
+			switch_to_layout_1,
+			switch_to_layout_2,
+			switch_to_layout_3,
+			switch_to_layout_4
 		};
 
 		std::map<string, MidiCommand> midiMappingsStringsToCommand = {
@@ -173,10 +183,17 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		 {"source_shuffle_switch", MidiCommand::source_shuffle_switch},
 		 {"sustain_mode", MidiCommand::sustain_mode },
 		 {"loop_mode", MidiCommand::loop_mode },
-         {"speed_dynamics", MidiCommand::speed_dynamics },
-         {"layout_shuffle", MidiCommand::layout_shuffle },
-         {"dynamics_decay", MidiCommand::dynamics_decay },
-         {"global_volume", MidiCommand::global_volume }
+     {"speed_dynamics", MidiCommand::speed_dynamics },
+     {"layout_shuffle", MidiCommand::layout_shuffle },
+     {"dynamics_decay", MidiCommand::dynamics_decay },
+     {"global_volume", MidiCommand::global_volume },
+     {"stutter_mode", MidiCommand::stutter_mode },
+     {"switch_to_layout_0", MidiCommand::switch_to_layout_0 },
+     {"switch_to_layout_1", MidiCommand::switch_to_layout_1 },
+     {"switch_to_layout_2", MidiCommand::switch_to_layout_2 },
+     {"switch_to_layout_3", MidiCommand::switch_to_layout_3 },
+     {"switch_to_layout_4", MidiCommand::switch_to_layout_4 }
+
 
 		};
 
@@ -195,11 +212,16 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		 {"source_shuffle_switch", 27},
 		 {"sustain_mode", 28 },
 		 {"loop_mode", 29 },
-         {"speed_dynamics", 30 },
-         {"layout_shuffle", 31 },
-         {"dynamics_decay", 32 },
-         {"global_volume", 33 }
-
+     {"speed_dynamics", 30 },
+     {"layout_shuffle", 31 },
+     {"dynamics_decay", 32 },
+     {"global_volume", 33 },
+     {"stutter_mode", 34 },
+		 {"switch_to_layout_0", 35},
+     {"switch_to_layout_1", 36 },
+     {"switch_to_layout_2", 37 },
+     {"switch_to_layout_3", 38 },
+     {"switch_to_layout_4", 39}
 		};
 
 

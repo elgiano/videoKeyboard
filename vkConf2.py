@@ -794,7 +794,7 @@ class MyWindow(Gtk.Window):
 
         self.configs = []
         self.setsDir = self.loadLastSetDir()
-    
+
 
         Gtk.Window.__init__(self, title="VideoKeys Configuration")
         self.set_border_width(10)
@@ -1044,8 +1044,8 @@ class MyWindow(Gtk.Window):
         #self.fillGroupsList()
 
     def setGroupLayout(self,widget,path,value):
-        self.selectedSourceConf()["layout"] = str(int(value))
-        self.layoutsList.set_cursor(self.selectedSourceConf()["layout"])
+        self.selectedSourceConf()["layout"] = int(value)
+        self.layoutsList.set_cursor(str(self.selectedSourceConf()["layout"]))
 
     def updateLayoutsCount(self):
         if self.selectedSet and self.selectedConf():
