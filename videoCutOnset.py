@@ -7,7 +7,7 @@ if len(sys.argv)>3:
     mindur = float(sys.argv[3])
 
 name = os.path.basename(file)
-extension = osq.path.splitext(name)[1]
+extension = os.path.splitext(name)[1]
 
 if not os.path.isfile(name+".onsets"):
     os.system("ffmpeg -i "+sys.argv[1]+" -map 0:a "+name+".audio.wav")

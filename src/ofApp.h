@@ -8,7 +8,7 @@
 #include "ofxJsonSettings.h"
 #include "ofxHapPlayer.h"
 
-#define MAX_VIDEOS 88
+#define MAX_VIDEOS 127
 #define MAX_CAPTURE 2
 #define N_LAYOUTS 6 // fullscreen, double v, double h, triple, tryptich, quad
 #define MAX_LAYOUTPOS 4
@@ -28,7 +28,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		float fade_in;
 		float fade_out;
 		int sustain_mode;
-		int saturation;
+		int brightness;
 
 		bool blending_multiply;
 		bool isDynamic = false;
@@ -36,8 +36,8 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		bool dynIsSpeed = false;
 		bool dynIsVolume = false;
 		bool dynIsDecaying = false;
-    bool layoutShuffle = false;
-		bool rms_mode = true;
+        bool layoutShuffle = false;
+		bool rms_mode = false;
 
 		bool stutterMode = true;
 
@@ -132,6 +132,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 
 
 		float fo_start[MAX_VIDEOS];
+        float sound_fadeTime = 0.2;
 
 		float tapTempo[MAX_VIDEOS];
 		float tapSpeed[MAX_VIDEOS];
@@ -142,6 +143,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		float startPos[MAX_VIDEOS];
 		float stutterStart[MAX_VIDEOS];
 		float stutterDur[MAX_VIDEOS];
+    float stutterDurGlobal = 1;
 
 		float lastDecayTime;
 		// keep track of n_activeVideos for volume settings
@@ -154,7 +156,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 			fade_out,
 			global_speed,
 			layout_change,
-			saturation,
+			brightness,
 			sustain,
 			sostenuto,
 			sostenuto_freeze,
@@ -169,6 +171,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
       layout_shuffle,
 			global_volume,
 			stutter_mode,
+            stutter_dur_global,
 			dynamics_volume,
 			rms_normalize,
 			switch_to_layout_0,
@@ -184,7 +187,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		 {"fade_out", MidiCommand::fade_out},
 		 {"global_speed", MidiCommand::global_speed},
 		 {"layout_change", MidiCommand::layout_change},
-		 {"saturation" , MidiCommand::saturation},
+		 {"brightness" , MidiCommand::brightness},
 		 {"sustain", MidiCommand::sustain},
 		 {"sostenuto", MidiCommand::sostenuto},
 		 {"sostenuto_freeze", MidiCommand::sostenuto_freeze},
@@ -199,6 +202,8 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
      {"dynamics_decay", MidiCommand::dynamics_decay },
      {"global_volume", MidiCommand::global_volume },
      {"stutter_mode", MidiCommand::stutter_mode },
+            {"stutter_dur_global", MidiCommand::stutter_dur_global },
+
      {"dynamics_volume", MidiCommand::dynamics_volume },
      {"rms_normalize", MidiCommand::rms_normalize },
      {"switch_to_layout_0", MidiCommand::switch_to_layout_0 },
@@ -216,7 +221,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		 {"fade_out", 23},
 		 {"global_speed", -1},
 		 {"layout_change", 1},
-		 {"saturation" , 2},
+		 {"brightness" , 2},
 		 {"sustain", 64},
 		 {"sostenuto", 65},
 		 {"sostenuto_freeze", 66},
@@ -231,6 +236,8 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
      {"dynamics_decay", 32 },
      {"global_volume", 33 },
      {"stutter_mode", 34 },
+            {"stutter_dur_global", 43 },
+
      {"dynamics_volume", 41 },
      {"rms_normalize", 42 },
 		 {"switch_to_layout_0", 35},
