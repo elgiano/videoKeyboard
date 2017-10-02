@@ -725,7 +725,11 @@ void ofApp::stopVideo(int key){
 }
 
 void ofApp::changeAllSpeed(float control){
-  float scaled =pow(3,ofMap(control,0,1,-2,2));
+  //float scaled =pow(3,ofMap(control,0,1,-2,2));
+    float scaled = 1.0;
+    if(round(control*10)/10!=0.5){
+        scaled =pow(3,ofMap(abs(control-0.5),0,0.5,-2,2))*-((control-0.5)>0?-1:1);
+    }
   speed = scaled;
   //cout << "scaled: "<< ofToString(scaled) << endl;
 }
