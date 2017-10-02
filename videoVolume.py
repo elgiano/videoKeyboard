@@ -1,18 +1,22 @@
 #!/bin/python
 
+# USAGE: python videoVolume.py dir ext
+
+
 from multiprocessing.dummy import Pool as ThreadPool
 import os,sys
 import subprocess
 
 def analyzeAudio(path):
+    
     #demux
+    path = path.replace(" ","\ ")
     if not os.path.isfile(path+".audio.wav"):
         os.system("ffmpeg -i "+path+" -map 0:a "+path+".audio.wav")
     #analyze volume
     proc = subprocess.run(["sox",path+".audio.wav", "-n","stat"], stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
 
     # extract RMS volume
-    #out = float(str(proc.stdout.splitlines()[8]).split(":")[-1].strip().replace("'",""))
     lines = proc.stdout.splitlines();
     if len(lines)>8:
         out = lines[8].split(b":")[-1]

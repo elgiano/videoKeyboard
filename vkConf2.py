@@ -1,7 +1,7 @@
 #!/bin/python
-#/Users/sorenkjaergard/Documents/openFrameworks/apps/myApps/videoKeyboard-master/bin/sets
+#/Users/sorenkjaergaard/Desktop/VideoKeyboard/videoKeyboard-master/sets
 
-from os import listdir, mkdir, symlink, remove, rename
+from os import listdir, mkdir,rmdir, symlink, remove, rename
 from os.path import isdir, isfile, join, getsize, abspath, isabs,realpath, basename
 import gi
 gi.require_version('Gtk', '3.0')
@@ -29,7 +29,7 @@ class LayoutSelectorGroup(Gtk.HBox):
         return [l.selected for l in self.layouts]
 
     def set_layout(self,layout):
-        if(isinstance(layout,str)):
+        if(isinstance(layout,str) or isinstance(layout,unicode)):
             layout = [int(l) for l in layout.split(",")]
         for i,s in enumerate(layout):
             self.layouts[i].setSelected(s)
@@ -405,7 +405,7 @@ class MyWindow(Gtk.Window):
         #print(self.selectedSet)
         self.groupsSection.set_child_visible(True)
 
-        self.videoListStore.clear()
+        self.clearVideosListStore()
         self.layoutsListStore.clear()
 
         self.updateLayoutsCount()
@@ -426,10 +426,10 @@ class MyWindow(Gtk.Window):
 
     def clearVideosListStore(self):
         try:
-            self.videosListStore.disconnect_by_func(self.videosReordered)
+            self.videoListStore.disconnect_by_func(self.videosReordered)
         except TypeError:
             print("nothing connected when disconnecting")
-        self.videosListStore.clear()
+        self.videoListStore.clear()
         self.videoListStore.connect("row-deleted",self.videosReordered)
 
     def clearGroupsListStore(self):
@@ -481,6 +481,7 @@ class MyWindow(Gtk.Window):
                         size = len([f for f in listdir(group["src"]) if isfile(join(group["src"],f))])
                     else:
                         size = len([f for f in listdir(join(path,group["src"])) if isfile(join(join(path,group["src"]),f))])
+                        
             self.groupsListStore.append([i,str(group["src"]),capture,size,group["layout"],0,0,"",group["type"]=="random"])
 
         self.updateGroupsMIDI()
@@ -532,16 +533,25 @@ class MyWindow(Gtk.Window):
         path = self.selectedSourceConf()["src"]
         if not isabs(path):
             path = join(join(self.setsDir,self.sets[self.selectedSet]),path)
-
         print(path)
+        
         self.videos = [f for f in listdir(path) if isfile(join(path,f)) and not f.endswith(".json")]
+        self.videos = self.removeDSStore(path,self.videos) 
         self.videos.sort()
-        self.videoListStore.clear()
+        self.clearVideosListStore()
         for i,video in enumerate(self.videos):
             # todo: extract duration
             self.videoListStore.append([i,self.videoName(video),video])
         self.videoListStore.connect("row-deleted",self.videosReordered)
 
+    def removeDSStore(self,path,videos):
+        newvideos = []
+        for video in videos:
+            if self.videoName(video) == ".DS_Store":
+                remove(join(path,video))
+            else:
+                newvideos.append(video)
+        return newvideos
 
     def fillCaptureList(self):
         if "captureID" not in self.selectedSourceConf():
@@ -554,7 +564,6 @@ class MyWindow(Gtk.Window):
         model,iter = self.layoutsList.get_selection().get_selected_rows()
         if len(iter) > 0:
             self.selectedLayout = iter[0].get_indices()[0]
-            print(self.selectedLayout)
             # display layouts
             self.layoutsGUI.set_child_visible(True)
             self.layoutsGUI.set_layout(self.selectedConf()["layouts"][str(self.selectedLayout)])
@@ -752,8 +761,13 @@ class MyWindow(Gtk.Window):
             row[0] = i
             # move files
             newName =  str(i).zfill(2) + "-" + row[1]
+            print(str(i))
+            print(str(i).zfill(2))
+            print(newName)
             rename(join(grpPath,"tmp",row[2]),join(grpPath,newName))
             row[2] = newName
+        rmdir(join(grpPath,"tmp"))
+
 
         #self.fillVideoList()
 
@@ -771,7 +785,7 @@ class MyWindow(Gtk.Window):
         self.updateGroupsMIDI()
 
     def updateGroupsMIDI(self):
-        lowest_midi = 21 # temp
+        lowest_midi = int(self.selectedConf()["mappings"]["first_midinote"]) or 0
         for g in self.groupsListStore:
             g[5] = lowest_midi
             if g[2]:
@@ -1168,8 +1182,11 @@ class MyWindow(Gtk.Window):
     # MIDI
 
     def initMidi(self):
-        self.midi_in, port = open_midiinput(self.midi_port)
-        self.midi_in.set_callback(self.midiCallback)
+        try:
+            self.midi_in, port = open_midiinput(self.midi_port)
+            self.midi_in.set_callback(self.midiCallback)
+        except:
+            return
 
     def changeMidiPort(self,port):
         self.midi_port = port
