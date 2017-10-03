@@ -372,7 +372,7 @@ void ofApp::drawVideoInLayout(int movieN){
         fi_alpha = (movie[movieN].getPosition()-startPos[movieN])*movie[movieN].getDuration();
         fi_alpha = fi_alpha/fade_in;fi_alpha = fi_alpha <= 0 ? 0 : fi_alpha >= 1 ? 1 : fi_alpha;
     }
-   
+
 
     // fade out
     //ofLogVerbose() << "fo " << ofToString(fo_start[movieN]);
@@ -389,12 +389,12 @@ void ofApp::drawVideoInLayout(int movieN){
       }else{
         // otherwise update the fade out
         fo_alpha = ofGetElapsedTimef()-fo_start[movieN];
-          
+
         // kill video if fade ended
         if(fo_alpha>fade_out){deactivateVideo(movieN);fo_start[movieN] = 0.0;return;}
 
         fo_alpha = 1-(fo_alpha/fade_out);
-         
+
       }
     }
 
@@ -420,12 +420,12 @@ void ofApp::drawVideoInLayout(int movieN){
       //cout << "FIRST LAYER" << ofToString(layoutPos) << endl;
       thisLayoutInit[layoutPos] = thisLayoutInit[layoutPos] + 1 ;
     }else{
-        
+
         // draw brightness layer
         ofEnableAlphaBlending();
         ofSetColor(brightness, brightness, brightness, 32);
         ofRect(0, 0, ofGetWidth(), ofGetHeight());
-        
+
       ofEnableBlendMode(OF_BLENDMODE_MULTIPLY);
       //cout << ofToString(thisLayoutInit[layoutPos])<< " pos"<< ofToString(layoutPos) << endl;
     }
@@ -503,9 +503,9 @@ void ofApp::drawVideoInLayout(int movieN){
 
 
   }
-    
-    
-    
+
+
+
 }
 
 
@@ -588,10 +588,9 @@ void ofApp::update(){
                   movie[i].play();
                   continue;
                }
-               
+
               //cout << dyn[i] << endl;
-<<<<<<< HEAD
-                
+
                 // sound fade in
                 float vol = 1;
                 float vol_fo = 1;
@@ -611,7 +610,7 @@ void ofApp::update(){
                 }else{
                    vol_fo = ((1-movie[i].getPosition())*movie[i].getDuration()/sound_fadeTime);
                 }
-                
+
                     vol = vol <= 0 ? 0 : vol >= 1 ? 1 : vol;
                     vol_fo = vol_fo <= 0 ? 0 : vol_fo >= 1 ? 1 : vol_fo;
 
@@ -620,18 +619,15 @@ void ofApp::update(){
                     }else{
                         vol = vol_fo*vol;
                     }
-                
-                    setVideoVolume(i,vol);
 
-                
-=======
-              setVideoVolume(i,1);
-              if(harmonic_loops){
-                if(movie[i].getPosition()*movie[i].getDuration()>=harmonicLoopDur(i)){
-                  movie[i].setPosition(startPos[i]);
-                }
-              }
->>>>>>> harmonicloop
+                    setVideoVolume(i,vol);
+                    if(harmonic_loops){
+                      if(movie[i].getPosition()*movie[i].getDuration()>=harmonicLoopDur(i)){
+                        movie[i].setPosition(startPos[i]);
+                      }
+                    }
+
+
               movie[i].update();
             }
             //ofLogVerbose() << "updated "+ofToString(i)+ofToString(active_videos[i]);
@@ -946,7 +942,7 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
                   if(msg.value == midiMaxVal){
                   isFading = !isFading;
                   ofLogVerbose("fading_switch: " + ofToString(isFading));
-                  } 
+                  }
                   break;
               case MidiCommand::blending_multiply_switch:
                   if(msg.value == midiMaxVal){

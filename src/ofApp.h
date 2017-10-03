@@ -36,14 +36,9 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		bool dynIsSpeed = false;
 		bool dynIsVolume = false;
 		bool dynIsDecaying = false;
-<<<<<<< HEAD
-        bool layoutShuffle = false;
-		bool rms_mode = false;
-=======
     bool layoutShuffle = false;
 		bool rms_mode = false;
 		bool harmonic_loops = true;
->>>>>>> harmonicloop
 
 		bool stutterMode = true;
 
