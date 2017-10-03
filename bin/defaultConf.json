@@ -14,5 +14,6 @@
     "2":"0,1,2,2,2",
     "3":"1,0,1,1,3"
   },
-  "mappings": {"first_midinote": 0, "global_speed": -1, "rms_normalize": 101, "speed_dynamics": 105, "sostenuto_freeze": 66, "source_shuffle_switch": 27, "switch_to_layout_5": 14, "sustain": 64, "fade_in": 6, "saturation": 10, "fade_out": 7, "global_volume": 1, "midi_port": 1, "layout_change": 0, "sustain_mode": 9, "switch_to_layout_2": 12, "switch_to_layout_3": 15, "switch_to_layout_0": 10, "switch_to_layout_1": 11, "dynamics_switch": 104, "switch_to_layout_4": 13, "stutter_mode": 8, "dynamics_volume": 102, "layout_shuffle": 109, "brightness": 3, "sostenuto": 65, "dynamics_decay": 108, "blending_multiply_switch": 103, "fade_switch": 107}
+  "mappings": {"first_midinote": 0, "global_speed": -1, "rms_normalize": 101, "speed_dynamics": 105, "sostenuto_freeze": 66, "source_shuffle_switch": 27, "switch_to_layout_5": 14, "sustain": 64, "fade_in": 6, "saturation": 10, "fade_out": 7, "global_volume": 1, "midi_port": 1, "layout_change": 0, "sustain_mode": 9, "switch_to_layout_2": 12, "switch_to_layout_3": 15, "switch_to_layout_0": 10, "switch_to_layout_1": 11, "dynamics_switch": 104, "switch_to_layout_4": 13, "stutter_mode": 8, "dynamics_volume": 102, "layout_shuffle": 109, "brightness": 3, "sostenuto": 65, "dynamics_decay": 108, "blending_multiply_switch": 103, "fade_switch": 107,"harmonic_loops": 43 ,
+  "harmonic_loop_base_dur":44 }
 }

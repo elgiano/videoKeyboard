@@ -138,6 +138,7 @@ void ofApp::loadConfigNew(string path){
       int thisDeviceID=0;
       bool thisIsCapture = false;
       bool thisIsRandom = false;
+      bool thisIsMultiple = false;
       string thisSrc = "";
       //type, source, layout
       if(Settings::get().exists("sources/"+std::to_string(thisFolder)+"/type")){
@@ -145,6 +146,8 @@ void ofApp::loadConfigNew(string path){
             thisIsCapture = true;
           }else if(Settings::getString("sources/"+std::to_string(thisFolder)+"/type")=="random"){
             thisIsRandom = true;
+          }else if(Settings::getString("sources/"+std::to_string(thisFolder)+"/type")=="multiple"){
+            thisIsMultiple = true;
           }
       }
 
@@ -172,6 +175,8 @@ void ofApp::loadConfigNew(string path){
               randSize = Settings::getInt("sources/"+std::to_string(thisFolder)+"/size");
           }
           loadRandomGroup(thisSrc,randSize);
+        }else if(thisIsMultiple){
+          loadMultipleGroup(thisSrc);
         }else{
           loadSourceGroup(thisSrc,thisLayout);
         }
@@ -218,25 +223,6 @@ void ofApp::loadMidiMappings(){
 
 void ofApp::loadDefaultConfig(){
   cout << "default conf" << endl;
-  /*
-  first_midinote = 21;
-  midi_port = 1;
-  fade_in = 0.01;
-  fade_out = 0.1;
-  blending_multiply = false;
-  random = false;
-
-  n_layouts = 4;
-
-  layoutConf = new int*[n_layouts];
-
-  layoutConf[0] = new int[N_LAYOUTS]{0,1,0,0,0};
-  layoutConf[1] = new int[N_LAYOUTS]{1,0,1,1,1};
-  layoutConf[2] = new int[N_LAYOUTS]{0,1,2,2,2};
-  layoutConf[3] = new int[N_LAYOUTS]{1,0,3,1,3};
-
-  n_captures = 0;
-    for(int i =0; i< MAX_CAPTURE; i++){capture_keys[i] = -1;}*/
   loadConfigNew(ofToDataPath("../defaultConf.json"));
 }
 
@@ -268,6 +254,10 @@ std::map<string,float> ofApp::readRms(string path){
   }
   return volumes;
 
+}
+
+void ofApp::loadMultipleGroup(string path){
+  cout << "multiple group: " << path << endl;
 }
 
 void ofApp::loadSourceGroup(string path,int layout){
@@ -732,12 +722,17 @@ void ofApp::stopVideo(int key){
 // ## SPEED ##
 
 void ofApp::changeAllSpeed(float control){
-  //float scaled =pow(3,ofMap(control,0,1,-2,2));
-    float scaled = 1.0;
+  float scaled =pow(3,ofMap(control,0,1,-2,2));
+  /*  float scaled = 1.0;
     if(round(control*10)/10!=0.5){
         scaled =pow(3,ofMap(abs(control-0.5),0,0.5,-2,2))*-((control-0.5)>0?-1:1);
-    }
-  speed = scaled;
+    }*/
+  if(control>=0){
+    speed = scaled * (speed_reverse?1:(-1));
+  }else{
+    // only update speed direction if control < 0
+    speed = speed * (speed_reverse?1:(-1));
+  }
   //cout << "scaled: "<< ofToString(scaled) << endl;
 }
 
@@ -841,7 +836,7 @@ void ofApp::stopSostenutoFreeze(){
 // ###
 
 float ofApp::harmonicLoopDur(int key){
-  float octave = key/12;
+  int octave = floor(key/12);
   float ratio = semitoneToRatio[(first_midinote + key) % 12] ;
   float dur = harmonicLoopBaseDur / (ratio * octave);
   cout << dur << " = " << harmonicLoopBaseDur << " / (" << ratio << "x" << octave << ")" << endl;
@@ -891,7 +886,11 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
       			case MidiCommand::global_speed:
               changeAllSpeed((float) msg.value/midiMaxVal);
               cout << "speed" << endl;
-
+              break;
+            case MidiCommand::speed_reverse:
+              speed_reverse = msg.value < (midiMaxVal/2);
+              changeAllSpeed(-1); // only update direction;
+              cout << "speed reverse:" << speed_reverse << endl;
               break;
       			case MidiCommand::layout_change:
               layout = round(msg.value/(midiMaxVal/N_LAYOUTS/2))-N_LAYOUTS;

@@ -104,7 +104,7 @@
 #
 #   Note: Leave a leading space when adding list items with the += operator
 ################################################################################
-PROJECT_CFLAGS = -fPIC -std=c++11
+PROJECT_CFLAGS = -fPIC -std=c11
 
 ################################################################################
 # PROJECT OPTIMIZATION CFLAGS
@@ -137,5 +137,5 @@ PROJECT_CFLAGS = -fPIC -std=c++11
 #		(default) PROJECT_CC = (blank)
 #   Note: Leave a leading space when adding list items with the += operator
 ################################################################################
-PROJECT_CXX = g++
+PROJECT_CXX = g++-6
 PROJECT_CC =  clang

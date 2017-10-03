@@ -38,7 +38,8 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		bool dynIsDecaying = false;
     bool layoutShuffle = false;
 		bool rms_mode = false;
-		bool harmonic_loops = true;
+		bool harmonic_loops = false;
+		bool speed_reverse = false;
 
 		bool stutterMode = true;
 
@@ -81,6 +82,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 
 		void loadConfigNew(string path);
 		void loadMidiMappings();
+		void loadMultipleGroup(string path);
 		void loadSourceGroup(string path, int layout);
 		void loadCaptureGroup(int deviceID, int layout);
 		void loadRandomGroup(string path,int size);
@@ -189,7 +191,8 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 			switch_to_layout_2,
 			switch_to_layout_3,
 			switch_to_layout_4,
-			switch_to_layout_5
+			switch_to_layout_5,
+			speed_reverse
 		};
 
 		std::map<string, MidiCommand> midiMappingsStringsToCommand = {
@@ -223,7 +226,8 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
      {"switch_to_layout_2", MidiCommand::switch_to_layout_2 },
      {"switch_to_layout_3", MidiCommand::switch_to_layout_3 },
      {"switch_to_layout_4", MidiCommand::switch_to_layout_4 },
-     {"switch_to_layout_5", MidiCommand::switch_to_layout_5 }
+     {"switch_to_layout_5", MidiCommand::switch_to_layout_5 },
+		 {"speed_reverse",MidiCommand::speed_reverse}
 
 
 		};
@@ -254,6 +258,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
      {"rms_normalize", 42 },
      {"harmonic_loops", 43 },
      {"harmonic_loop_base_dur", 44 },
+     {"speed_reverse", 45 },
 		 {"switch_to_layout_0", 35},
      {"switch_to_layout_1", 36 },
      {"switch_to_layout_2", 37 },
