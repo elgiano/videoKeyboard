@@ -574,7 +574,11 @@ void ofApp::update(){
                }
               //cout << dyn[i] << endl;
               setVideoVolume(i,1);
-              //movie[i].setVolume(volume*videoVolume[i]);
+              if(harmonic_loops){
+                if(movie[i].getPosition()*movie[i].getDuration()>=harmonicLoopDur(i)){
+                  movie[i].setPosition(startPos[i]);
+                }
+              }
               movie[i].update();
             }
             //ofLogVerbose() << "updated "+ofToString(i)+ofToString(active_videos[i]);
@@ -671,6 +675,8 @@ void ofApp::stopVideo(int key){
   }
 }
 
+// ## SPEED ##
+
 void ofApp::changeAllSpeed(float control){
   float scaled =pow(3,ofMap(control,0,1,-2,2));
   speed = scaled;
@@ -712,6 +718,9 @@ float ofApp::tapToSpeed(float t,int k){
   //cout << ofToString(tapSpeed[k]) << endl;
   return tapSpeed[k];
 };
+
+
+// ## SUSTAINs ##
 
 void ofApp::stopSustain(){
     for(int i=0;i<MAX_VIDEOS;i++){tapSpeed[i]=1.0;};
@@ -767,6 +776,16 @@ void ofApp::stopSostenutoFreeze(){
 
         }
     };
+}
+
+// ###
+
+float ofApp::harmonicLoopDur(int key){
+  float octave = key/12;
+  float ratio = semitoneToRatio[(first_midinote + key) % 12] ;
+  float dur = harmonicLoopBaseDur / (ratio * octave);
+  cout << dur << " = " << harmonicLoopBaseDur << " / (" << ratio << "x" << octave << ")" << endl;
+  return harmonicLoopBaseDur / (ratio * octave);
 }
 
 // ### INPUT ####
@@ -917,6 +936,14 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
               case MidiCommand::stutter_mode:
                   stutterMode = !stutterMode;
                   cout << "stutter_mode:" << stutterMode << endl;
+                  break;
+              case MidiCommand::harmonic_loops:
+                  harmonic_loops = !harmonic_loops;
+                  cout << "harmonic_loops:" << harmonic_loops << endl;
+                  break;
+              case MidiCommand::harmonic_loop_base_dur:
+                  harmonicLoopBaseDur = (float)msg.value/midiMaxVal*10;
+                  cout << "harmonic_loops_baseDur:" << harmonicLoopBaseDur << endl;
                   break;
               case MidiCommand::switch_to_layout_0:
                   layout = 0;
