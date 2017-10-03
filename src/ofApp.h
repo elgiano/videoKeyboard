@@ -36,8 +36,14 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		bool dynIsSpeed = false;
 		bool dynIsVolume = false;
 		bool dynIsDecaying = false;
+<<<<<<< HEAD
         bool layoutShuffle = false;
 		bool rms_mode = false;
+=======
+    bool layoutShuffle = false;
+		bool rms_mode = false;
+		bool harmonic_loops = true;
+>>>>>>> harmonicloop
 
 		bool stutterMode = true;
 
@@ -100,8 +106,15 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
         void stopSostenutoFreeze();
         void panic();
 
+    float harmonicLoopDur(int key);
+
 		void keyPressed(int key);
 		void keyReleased(int key);
+
+		float harmonicLoopBaseDur = 1.0;
+		const float semitoneToRatio[12] = {
+			1,1.0625,1.125,1.2,1.25,1.3333,1.375,1.5,1.625,1.6666,1.75,1.875
+		};
 
 
 	private:
@@ -174,6 +187,8 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
             stutter_dur_global,
 			dynamics_volume,
 			rms_normalize,
+			harmonic_loops,
+			harmonic_loop_base_dur,
 			switch_to_layout_0,
 			switch_to_layout_1,
 			switch_to_layout_2,
@@ -206,6 +221,8 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 
      {"dynamics_volume", MidiCommand::dynamics_volume },
      {"rms_normalize", MidiCommand::rms_normalize },
+     {"harmonic_loops", MidiCommand::harmonic_loops },
+     {"harmonic_loop_base_dur", MidiCommand::harmonic_loop_base_dur },
      {"switch_to_layout_0", MidiCommand::switch_to_layout_0 },
      {"switch_to_layout_1", MidiCommand::switch_to_layout_1 },
      {"switch_to_layout_2", MidiCommand::switch_to_layout_2 },
@@ -240,6 +257,8 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 
      {"dynamics_volume", 41 },
      {"rms_normalize", 42 },
+     {"harmonic_loops", 43 },
+     {"harmonic_loop_base_dur", 44 },
 		 {"switch_to_layout_0", 35},
      {"switch_to_layout_1", 36 },
      {"switch_to_layout_2", 37 },
