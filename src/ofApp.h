@@ -8,7 +8,9 @@
 #include "ofxJsonSettings.h"
 #include "ofxHapPlayer.h"
 
-#define MAX_VIDEOS 127
+#define MAX_VIDEOS 255
+#define MAX_SETS 8
+
 #define MAX_CAPTURE 2
 #define N_LAYOUTS 6 // fullscreen, double v, double h, triple, tryptich, quad
 #define MAX_LAYOUTPOS 4
@@ -192,7 +194,13 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 			switch_to_layout_3,
 			switch_to_layout_4,
 			switch_to_layout_5,
-			speed_reverse
+			speed_reverse,
+			switch_to_set_0,
+      switch_to_set_1,
+      switch_to_set_2,
+      switch_to_set_3,
+      switch_to_set_4,
+      switch_to_set_5
 		};
 
 		std::map<string, MidiCommand> midiMappingsStringsToCommand = {
@@ -215,8 +223,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
      {"dynamics_decay", MidiCommand::dynamics_decay },
      {"global_volume", MidiCommand::global_volume },
      {"stutter_mode", MidiCommand::stutter_mode },
-            {"stutter_dur_global", MidiCommand::stutter_dur_global },
-
+     {"stutter_dur_global", MidiCommand::stutter_dur_global },
      {"dynamics_volume", MidiCommand::dynamics_volume },
      {"rms_normalize", MidiCommand::rms_normalize },
      {"harmonic_loops", MidiCommand::harmonic_loops },
@@ -227,7 +234,13 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
      {"switch_to_layout_3", MidiCommand::switch_to_layout_3 },
      {"switch_to_layout_4", MidiCommand::switch_to_layout_4 },
      {"switch_to_layout_5", MidiCommand::switch_to_layout_5 },
-		 {"speed_reverse",MidiCommand::speed_reverse}
+		 {"speed_reverse",MidiCommand::speed_reverse},
+		 {"switch_to_set_0", MidiCommand::switch_to_set_0 },
+     {"switch_to_set_1", MidiCommand::switch_to_set_1 },
+     {"switch_to_set_2", MidiCommand::switch_to_set_2 },
+     {"switch_to_set_3", MidiCommand::switch_to_set_3 },
+     {"switch_to_set_4", MidiCommand::switch_to_set_4 },
+     {"switch_to_set_5", MidiCommand::switch_to_set_5 },
 
 
 		};
@@ -264,7 +277,13 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
      {"switch_to_layout_2", 37 },
      {"switch_to_layout_3", 38 },
      {"switch_to_layout_4", 39},
-     {"switch_to_layout_5", 40}
+     {"switch_to_layout_5", 40},
+		 {"switch_to_set_0", 46},
+     {"switch_to_set_1", 47 },
+     {"switch_to_set_2", 48},
+     {"switch_to_set_3", 49 },
+     {"switch_to_set_4", 50 },
+     {"switch_to_set_5", 51 },
 		};
 
 
@@ -279,6 +298,10 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		// 5: quad (0-3)
 
 		int layoutCount[N_LAYOUTS+1][MAX_LAYOUTPOS]={0};
+
+		int activeSet = 0;
+		int loadedSets = 0;
+		int setStart[MAX_SETS] = {0};
 
 		int** layoutConf;
 

@@ -25,6 +25,7 @@ void ofApp::setup(){
   n_captures = 0;
   n_videos = 0;
 
+
   for(int i=0;i<MAX_CAPTURE;i++){
     capture_keys[i] = -1;
   }
@@ -89,8 +90,9 @@ void ofApp::findConfig(){
 
 void ofApp::loadConfigNew(string path){
   Settings::get().load(path);
+  cout << "custom conf" << endl;
+  string enclosingDir = ofFilePath::getEnclosingDirectory(path);
   if( Settings::get().exists("general")){
-      cout << "custom conf" << endl;
       if(Settings::get().exists("general/first_midinote")){
         first_midinote=Settings::getInt("general/first_midinote");
       }
@@ -174,11 +176,11 @@ void ofApp::loadConfigNew(string path){
           if(Settings::get().exists("sources/"+std::to_string(thisFolder)+"/size")){
               randSize = Settings::getInt("sources/"+std::to_string(thisFolder)+"/size");
           }
-          loadRandomGroup(thisSrc,randSize);
+          loadRandomGroup(ofFilePath::join(enclosingDir,thisSrc),randSize);
         }else if(thisIsMultiple){
           loadMultipleGroup(thisSrc);
         }else{
-          loadSourceGroup(thisSrc,thisLayout);
+          loadSourceGroup(ofFilePath::join(enclosingDir,thisSrc),thisLayout);
         }
       }
 
@@ -258,9 +260,28 @@ std::map<string,float> ofApp::readRms(string path){
 
 void ofApp::loadMultipleGroup(string path){
   cout << "multiple group: " << path << endl;
+  ofDirectory subdir(path);
+  subdir.listDir();
+  subdir.sort();
+  loadedSets = 0;
+  for(unsigned int i=0; i<subdir.size(); i++){
+    ofDirectory thisPath(subdir.getPath(i));
+    if(thisPath.isDirectory()){
+      // load config
+      thisPath.allowExt("json");
+      thisPath.listDir();
+      thisPath.sort();
+      setStart[loadedSets++] = n_videos;
+      if(thisPath.size()>0){
+        loadConfigNew(thisPath.getPath(0));
+      };
+
+    }
+  }
 }
 
 void ofApp::loadSourceGroup(string path,int layout){
+    cout << "loading source group " << path << endl;
     ofDirectory subdir(path);
     subdir.allowExt("mov");
     subdir.listDir();
@@ -276,7 +297,7 @@ void ofApp::loadSourceGroup(string path,int layout){
       if(ofFile(subdir.getPath(k)).isFile()){
         movie[n_videos].load(subdir.getPath(k));
         initVideoVariables(n_videos);
-        cout << subdir.getPath(k) << endl;
+        //cout << subdir.getPath(k) << endl;
         if(volumes[subdir.getPath(k)]>0){
           videoRms[n_videos] = volumes[subdir.getPath(k)];
         }
@@ -649,7 +670,14 @@ void ofApp::panic(){
 }
 
 void ofApp::playVideo(int key, float vel){
-  key = key % n_videos;
+  //key = key % n_videos;
+  key = setStart[activeSet] + key;
+  if(activeSet < (loadedSets-1)){
+    key = setStart[activeSet] + (key%(setStart[activeSet+1]-setStart[activeSet]));
+  }else{
+    key = setStart[activeSet] + key%(n_videos-setStart[activeSet]);
+  }
+  cout << "playing video KEY:" << key << " of set:" << activeSet << " setstart:" << setStart[activeSet] << endl;
   //ofLog(OF_LOG_VERBOSE,"starting video " + ofToString(key));
   if(key>=0 && key < MAX_VIDEOS){
     // update dynamics and stop fade_out
@@ -690,7 +718,13 @@ void ofApp::deactivateVideo(int key){
   n_activeVideos--;
 }
 void ofApp::stopVideo(int key){
-  key = key % n_videos;
+  //key = key % n_videos;
+  key = setStart[activeSet] + key;
+  if(activeSet < (loadedSets-1)){
+    key = setStart[activeSet] + (key%(setStart[activeSet+1]-setStart[activeSet]));
+  }else{
+    key = setStart[activeSet] + key%(n_videos-setStart[activeSet]);
+  }
   ofLog(OF_LOG_VERBOSE, "stopping video " + ofToString(key));
 
   if(key>=0 && key < MAX_VIDEOS){
@@ -1051,6 +1085,30 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
               case MidiCommand::switch_to_layout_5:
                   layout = 5;
                   cout << "layout " << ofToString(layout)<< endl;
+                  break;
+              case MidiCommand::switch_to_set_0:
+                  activeSet = 0;
+                  cout << "activeSet " << ofToString(activeSet)<< endl;
+                  break;
+              case MidiCommand::switch_to_set_1:
+                  activeSet = 1%loadedSets;
+                  cout << "activeSet " << ofToString(activeSet)<< endl;
+                  break;
+              case MidiCommand::switch_to_set_2:
+                  activeSet = 2%loadedSets;
+                  cout << "activeSet " << ofToString(activeSet)<< endl;
+                  break;
+              case MidiCommand::switch_to_set_3:
+                  activeSet = 3%loadedSets;
+                  cout << "activeSet " << ofToString(activeSet)<< endl;
+                  break;
+              case MidiCommand::switch_to_set_4:
+                  activeSet = 4%loadedSets;
+                  cout << "activeSet " << ofToString(activeSet)<< endl;
+                  break;
+              case MidiCommand::switch_to_set_5:
+                  activeSet = 5%loadedSets;
+                  cout << "activeSet " << ofToString(activeSet)<< endl;
                   break;
           }
       midiMaxVal = 127; // reset maxVal to control
