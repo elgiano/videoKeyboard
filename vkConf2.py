@@ -752,7 +752,6 @@ class MyWindow(Gtk.Window):
                             done = False
                             continue
                     else:
-                        srcType = "capture"
                         confirmation = self.askForConfirmation("Create new directory","The directory doesn't exist, do you want to create it?")
                         if not confirmation:
                             done = False
@@ -765,6 +764,8 @@ class MyWindow(Gtk.Window):
                             error.destroy()
                             done = False
                             continue
+                else:
+                    srcType = "capture"
 
                 # create new group
                 self.appendGroup(srcType,folderEntry.get_text(),int(captureID.get_value()),int(layoutID.get_value()))
@@ -912,10 +913,10 @@ class MyWindow(Gtk.Window):
         col = Gtk.TreeViewColumn("Sets",Gtk.CellRendererText(),text=1)
         col.set_expand(True)
         self.setList.append_column(col)
-        btn = Gtk.CellRendererToggle()
-        btn.set_radio(True)
-        btn.connect("toggled",self.midiMappingDialog)
-        self.setList.append_column(Gtk.TreeViewColumn("MIDI map",btn))
+        #btn = Gtk.CellRendererToggle()
+        #btn.set_radio(True)
+        #btn.connect("toggled",self.midiMappingDialog)
+        #self.setList.append_column(Gtk.TreeViewColumn("MIDI map",btn))
 
 
         self.setList.connect("cursor-changed",self.selectSet)
@@ -928,7 +929,12 @@ class MyWindow(Gtk.Window):
 
         self.newSetBtn = Gtk.Button("+ Create New")
         self.newSetBtn.connect("clicked",self.createNewSet)
-        box_setSection.pack_start(self.newSetBtn,False,True,0)
+        midiBtn = Gtk.Button("MIDI mappings")
+        midiBtn.connect("clicked",self.midiMappingDialog)
+        btnBox = Gtk.HBox()
+        btnBox.pack_start(self.newSetBtn,True,True,0)
+        btnBox.pack_start(midiBtn,True,True,0)
+        box_setSection.pack_start(btnBox,False,True,0)
 
         box_outer.pack_start(box_setSection,True,True,0)
 
