@@ -1,5 +1,5 @@
 #!/bin/python
-#/Users/sorenkjaergaard/Desktop/VideoKeyboard/videoKeyboard-master/sets
+#/home/giano/projects/soren/videoKeyboardHap/bin/sets
 
 from os import listdir, mkdir,rmdir, symlink, remove, rename
 from os.path import isdir, isfile, join, getsize, abspath, isabs,realpath, basename
@@ -275,6 +275,16 @@ class MyWindow(Gtk.Window):
                 except json.decoder.JSONDecodeError:
                     print("JSONDecodeError: "+confFile)
 
+        self.midi_mappings = None
+        midi_mappings_file = join(self.setsDir,"../midi_mappings.json")
+        if isfile(midi_mappings_file):
+            with open(midi_mappings_file) as data_file:
+                try:
+                    self.midi_mappings = json.load(data_file)
+                except json.decoder.JSONDecodeError:
+                    print("JSONDecodeError: "+confFile)
+
+
         self.configs = [None for f in self.sets]
         for i,set in enumerate(self.sets):
             confFile = join(join(self.setsDir,set),"config.json")
@@ -288,7 +298,9 @@ class MyWindow(Gtk.Window):
         self.validateConfigs()
 
     def writeConfig(self,set_number):
-        path = join(self.setsDir,self.sets[set_number],"config.json")
+        path = join(self.setsDir,"../midi_mappings.json") if id==(-1) else join(self.setsDir,self.sets[set_number],"config.json")
+        conf = self.midi_mappings if id==(-1) else self.configs[set_number]
+        #path = join(self.setsDir,self.sets[set_number],"config.json")
         with open(path,"w") as data_file:
             try:
                 json.dump(self.configs[set_number],data_file)
@@ -317,7 +329,24 @@ class MyWindow(Gtk.Window):
                         print("JSONDecodeError: "+confFile)
             if origConf != self.configs[i]:
                 unsavedList.append([i,set])
+        mm = self.findUnsavedMappings()
+        if mm:
+            unsavedList.insert(0,mm)
         return unsavedList
+
+    def findUnsavedMappings(self):
+        origConf = None
+        origConfFile = join(self.setsDir,"../midi_mappings.json")
+        if isfile(origConfFile):
+            with open(origConfFile) as data_file:
+                try:
+                    origConf = json.load(data_file)
+                except json.decoder.JSONDecodeError:
+                    print("JSONDecodeError: "+confFile)
+        if origConf != self.midi_mappings:
+            return [-1,"Midi Mappings"]
+        else:
+            return False
 
 
     def saveDialog(self,*argv):
@@ -351,10 +380,12 @@ class MyWindow(Gtk.Window):
         if self.fillUnsavedList(dialog,saveList) == 0:
             dialog.destroy()
 
+
     def fillUnsavedList(self,dialog,saveList):
         for e in saveList.get_children():
             saveList.remove(e)
-        for i,unsaved in enumerate(self.findUnsavedConfigs()):
+        unsavedList = self.findUnsavedConfigs()
+        for i,unsaved in enumerate(unsavedList):
             btn = Gtk.Button("Save")
             btn.connect("clicked",self.saveOneAndReloadList,dialog,saveList,unsaved[0])
             label = Gtk.Label(unsaved[1],xalign=0)
@@ -362,13 +393,14 @@ class MyWindow(Gtk.Window):
             layout = Gtk.HBox(homogeneous=False,spacing=10)
             saveList.attach(label,0,i,1,1)
             saveList.attach(btn,1,i,1,1)
-        return len(self.findUnsavedConfigs())
+        return len(unsavedList)
 
 
     def validateConfigs(self):
         for i,conf in enumerate(self.configs):
             if conf != None:
-                for key in ["general","sources","layouts","mappings"]:
+                #for key in ["general","sources","layouts","mappings"]:
+                for key in ["sources","layouts"]:
                     if key not in conf:
                         conf[key] = {}
             else:
@@ -481,7 +513,7 @@ class MyWindow(Gtk.Window):
                         size = len([f for f in listdir(group["src"]) if isfile(join(group["src"],f))])
                     else:
                         size = len([f for f in listdir(join(path,group["src"])) if isfile(join(join(path,group["src"]),f))])
-                        
+
             self.groupsListStore.append([i,str(group["src"]),capture,size,group["layout"],0,0,"",group["type"]=="random"])
 
         self.updateGroupsMIDI()
@@ -534,9 +566,9 @@ class MyWindow(Gtk.Window):
         if not isabs(path):
             path = join(join(self.setsDir,self.sets[self.selectedSet]),path)
         print(path)
-        
+
         self.videos = [f for f in listdir(path) if isfile(join(path,f)) and not f.endswith(".json")]
-        self.videos = self.removeDSStore(path,self.videos) 
+        self.videos = self.removeDSStore(path,self.videos)
         self.videos.sort()
         self.clearVideosListStore()
         for i,video in enumerate(self.videos):
@@ -614,6 +646,36 @@ class MyWindow(Gtk.Window):
                 done = True
 
         dialog.destroy()
+
+    def groupsKeypress(self,wid,event):
+        if event.keyval==65288 or event.keyval==65535:
+            grpName = self.selectedSourceConf()["src"];
+            dialog = Gtk.MessageDialog(self, 0, Gtk.MessageType.QUESTION,
+                Gtk.ButtonsType.NONE, "Are you sure you want to delete the group "+grpName+"?")
+            dialog.add_buttons("Just remove from Conf",Gtk.ResponseType.OK,"Delete from filesystem",Gtk.ResponseType.YES,"Cancel",Gtk.ResponseType.CANCEL)
+            dialog.format_secondary_text("You can just unlink it from the configuration (without removing anything from the filesystem) or remove the folder")
+            response = dialog.run()
+            if response == Gtk.ResponseType.OK:
+                self.removeGroup(self.selectedGroup,False)
+            elif response == Gtk.ResponseType.YES:
+                self.removeGroup(self.selectedGroup,True)
+            dialog.destroy()
+
+
+    def removeGroup(self,groupId,removeFromFS):
+        if removeFromFS:
+            print(self.selectedGroupPath());
+
+
+        # remove from config
+        del self.selectedConf()["sources"][str(groupId)]
+        # and liststore
+        try:
+            self.groupsList.disconnect_by_func(self.selectGroup)
+        except TypeError:
+            print("nothing connected")
+        self.groupsListStore.remove(self.groupsListStore.get_iter(self.selectedGroup))
+
 
 
     def appendGroup(self,srcType,name,captureID,layoutID):
@@ -785,7 +847,8 @@ class MyWindow(Gtk.Window):
         self.updateGroupsMIDI()
 
     def updateGroupsMIDI(self):
-        lowest_midi = int(self.selectedConf()["mappings"]["first_midinote"]) or 0
+        # lowest_midi = int(self.selectedConf()["mappings"]["first_midinote"]) or 0
+        lowest_midi = int(self.midi_mappings["first_midinote"]) or 0
         for g in self.groupsListStore:
             g[5] = lowest_midi
             if g[2]:
@@ -891,6 +954,7 @@ class MyWindow(Gtk.Window):
         self.groupsList = Gtk.TreeView(self.groupsListStore)
         self.groupsList.set_reorderable(True)
         self.groupsListStore.connect("row-deleted",self.groupsReordered)
+        self.groupsList.connect("key-press-event",self.groupsKeypress)
         self.groupsList.append_column(Gtk.TreeViewColumn("",Gtk.CellRendererText(),text=0))
         capToggle = Gtk.CellRendererToggle()
         capToggle.connect("toggled",self.groupCaptureToggled)
@@ -1076,20 +1140,31 @@ class MyWindow(Gtk.Window):
             self.groupsList.disconnect_by_func(self.selectGroup)
         except TypeError:
             print("nothing connected")
-        self.selectedGroup = currOrder.index(self.selectedGroup)
+        self.selectedGroup = currOrder.index(self.selectedGroup) if self.selectedGroup in currOrder else 0
         self.groupsList.set_cursor(self.selectedGroup)
         self.groupsList.connect("cursor-changed",self.selectGroup)
         # change numbering in the model and conf
         # first change indexes from str to int, then change int in new strings
         keys = self.selectedConf()["sources"].copy().keys()
+        print("keys");
+        print(keys);
         for key in keys:
             self.selectedConf()["sources"][int(key)] = self.selectedConf()["sources"][key]
         for i,co in enumerate(currOrder):
+            print(i)
+            print(co)
+            print("-")
             self.selectedConf()["sources"][str(i)] = self.selectedConf()["sources"][int(co)]
             del self.selectedConf()["sources"][int(co)]
         # update numbering in the model
         for i,row in enumerate(self.groupsListStore):
             row[0] = i
+        print(self.selectedConf()["sources"])
+        # remove eventual residues (if groupRemoved)
+        newOrder = [row[0] for row in self.groupsListStore]
+        for old in currOrder:
+            if not old in newOrder:
+                del self.selectedConf()["sources"][str(old)]
         self.updateGroupsMIDI()
 
     def renameGroup(self,renderer,treepath,newName):
@@ -1159,12 +1234,17 @@ class MyWindow(Gtk.Window):
 
     def loadMidiConf(self):
         self.midiListStore.clear()
-        if "mappings" in self.defaultConfig:
+        '''if "mappings" in self.defaultConfig:
             for funcName in self.defaultConfig["mappings"]:
                 print(funcName)
                 code = self.defaultConfig["mappings"][funcName]
                 if funcName in self.selectedConf()["mappings"]:
                     code = self.selectedConf()["mappings"][funcName]
+                prFuncName = funcName.replace("_"," ").title()
+                self.midiListStore.append([funcName,prFuncName,code])'''
+        if self.midi_mappings:
+            for funcName in self.midi_mappings:
+                code = self.midi_mappings[funcName]
                 prFuncName = funcName.replace("_"," ").title()
                 self.midiListStore.append([funcName,prFuncName,code])
 
@@ -1172,8 +1252,8 @@ class MyWindow(Gtk.Window):
         # update model
         self.midiListStore[path][2] = int(newValue)
         # update config
-        self.selectedConf()["mappings"][self.midiListStore[path][0]] = int(newValue)
-
+        # self.selectedConf()["mappings"][self.midiListStore[path][0]] = int(newValue)
+        self.midi_mappings[self.midiListStore[path][0]] = int(newValue)
         if self.midiListStore[path][0] == "midi_port":
             self.changeMidiPort(int(newValue))
 
