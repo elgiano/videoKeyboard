@@ -224,8 +224,17 @@ void ofApp::loadMidiMappings(){
 }
 
 void ofApp::loadDefaultConfig(){
+  cout << "default midi mappings" << endl;
+  loadDefaultMidiMappings();
   cout << "default conf" << endl;
   loadConfigNew(ofToDataPath("../defaultConf.json"));
+}
+
+void ofApp::loadDefaultMidiMappings(){
+  if(ofFile::doesFileExist(ofToDataPath("../midi_mappings.json"))){
+    Settings::get().load(ofToDataPath("../midi_mappings.json"));
+    loadMidiMappings();
+  }
 }
 
 // ## load videos ##

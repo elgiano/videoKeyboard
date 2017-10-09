@@ -79,6 +79,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		void initVideoVariables(int key);
 		void loadConfig(string path);
 		void loadDefaultConfig();
+		void loadDefaultMidiMappings();
 		/*void loadDataDir();
 		void loadFolders();
 		void loadRandom();*/
