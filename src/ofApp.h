@@ -15,6 +15,7 @@
 #define N_LAYOUTS 6 // fullscreen, double v, double h, triple, tryptich, quad
 #define MAX_LAYOUTPOS 4
 
+class SoundFader;
 
 class ofApp : public ofBaseApp, public ofxMidiListener{
 
@@ -90,6 +91,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		void loadRandomGroup(string path,int size);
 		std::map<string,float> readRms(string path);
 		void setVideoVolume(int key,float vol);
+		void soundFades(int i);
 
 		void playVideo(int key, float vel);
 		void deactivateVideo(int key);
@@ -109,6 +111,8 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 
 		void keyPressed(int key);
 		void keyReleased(int key);
+
+		void exit();
 
 		float harmonicLoopBaseDur = 1.0;
 		const float semitoneToRatio[12] = {
@@ -141,6 +145,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
     bool sostenuto_videos[MAX_VIDEOS];
     bool sostenutoFreeze_videos[MAX_VIDEOS];
 
+		SoundFader* soundFader[MAX_VIDEOS];
 
 
 		float fo_start[MAX_VIDEOS];
@@ -304,6 +309,26 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		int setStart[MAX_SETS] = {0};
 
 		int** layoutConf;
+};
 
+class SoundFader : public ofThread {
 
+public:
+  int deltams = 10;
+
+  void setup(ofApp *controller,int key) {
+    movieN = key;
+    ctrl = controller;
+  }
+
+  void threadedFunction() {
+    while(isThreadRunning()){
+			ctrl->soundFades(movieN);
+      std::this_thread::sleep_for(std::chrono::milliseconds(deltams));
+    }
+  }
+
+private:
+  ofApp *ctrl;
+  int movieN;
 };

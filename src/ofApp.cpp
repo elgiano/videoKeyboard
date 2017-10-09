@@ -242,6 +242,8 @@ void ofApp::initVideoVariables(int key){
   stutterStart[key] = 0;
   stutterDur[key] = 0.1;
   movie[key].setLoopState(OF_LOOP_NORMAL);
+  soundFader[key] = new SoundFader();
+  soundFader[key]->setup(this,key);
 }
 
 std::map<string,float> ofApp::readRms(string path){
@@ -388,7 +390,7 @@ void ofApp::drawVideoInLayout(int movieN){
     // fade out
     //ofLogVerbose() << "fo " << ofToString(fo_start[movieN]);
     float fo_alpha = 1;
-    float fo_vol = 1;
+    //float fo_vol = 1;
     // if fade_out is 0 or fade switch is off, and video was already stopped, deactivate it
     // the real stopping of videos happens here for threading sake
     if(fo_start[movieN] > 0){
@@ -435,7 +437,7 @@ void ofApp::drawVideoInLayout(int movieN){
         // draw brightness layer
         ofEnableAlphaBlending();
         ofSetColor(brightness, brightness, brightness, 32);
-        ofRect(0, 0, ofGetWidth(), ofGetHeight());
+        ofDrawRectangle(0, 0, ofGetWidth(), ofGetHeight());
 
       ofEnableBlendMode(OF_BLENDMODE_MULTIPLY);
       //cout << ofToString(thisLayoutInit[layoutPos])<< " pos"<< ofToString(layoutPos) << endl;
@@ -602,36 +604,8 @@ void ofApp::update(){
 
               //cout << dyn[i] << endl;
 
-                // sound fade in
-                float vol = 1;
-                float vol_fo = 1;
-                if(((movie[i].getPosition()-startPos[i])*movie[i].getDuration())<sound_fadeTime){
-                    vol = (movie[i].getPosition()-startPos[i])*movie[i].getDuration();
-                    //cout << "pos: " << vol << endl;
-                    vol = vol/sound_fadeTime;
-                }
-                // sound fade_out
-                if(fo_start[i]>0){
-                    if(fade_out<=sound_fadeTime){
-                        vol_fo = 1-((ofGetElapsedTimef()-fo_start[i])/sound_fadeTime);
-                    }else{
-                        vol_fo = 1-((ofGetElapsedTimef()-fo_start[i])/fade_out);
+                soundFades(i);
 
-                    }
-                }else{
-                   vol_fo = ((1-movie[i].getPosition())*movie[i].getDuration()/sound_fadeTime);
-                }
-
-                    vol = vol <= 0 ? 0 : vol >= 1 ? 1 : vol;
-                    vol_fo = vol_fo <= 0 ? 0 : vol_fo >= 1 ? 1 : vol_fo;
-
-                    if(vol<1 && vol_fo<1){
-                        vol = (vol_fo+vol)/2;
-                    }else{
-                        vol = vol_fo*vol;
-                    }
-
-                    setVideoVolume(i,vol);
                     if(harmonic_loops){
                       if(movie[i].getPosition()*movie[i].getDuration()>=harmonicLoopDur(i)){
                         movie[i].setPosition(startPos[i]);
@@ -645,6 +619,40 @@ void ofApp::update(){
         }
     }else if(movie[i].isPlaying() ){movie[i].stop();}
   }
+}
+
+void ofApp::soundFades(int i){
+  // sound fade in
+  float vol = 1;
+  float vol_fo = 1;
+  if(((movie[i].getPosition()-startPos[i])*movie[i].getDuration())<sound_fadeTime){
+      vol = (movie[i].getPosition()-startPos[i])*movie[i].getDuration();
+      //cout << "pos: " << vol << endl;
+      vol = vol/sound_fadeTime;
+  }
+  // sound fade_out
+  if(fo_start[i]>0){
+      if(fade_out<=sound_fadeTime){
+          vol_fo = 1-((ofGetElapsedTimef()-fo_start[i])/sound_fadeTime);
+      }else{
+          vol_fo = 1-((ofGetElapsedTimef()-fo_start[i])/fade_out);
+
+      }
+  }else{
+     vol_fo = ((1-movie[i].getPosition())*movie[i].getDuration()/sound_fadeTime);
+  }
+
+  vol = vol <= 0 ? 0 : vol >= 1 ? 1 : vol;
+  vol_fo = vol_fo <= 0 ? 0 : vol_fo >= 1 ? 1 : vol_fo;
+
+  if(vol<1 && vol_fo<1){
+      vol = (vol_fo+vol)/2;
+  }else{
+      vol = vol_fo*vol;
+  }
+  //cout << "sf"<<i<<" vol:"<<vol<<endl;
+  setVideoVolume(i,vol);
+
 }
 
 void ofApp::setVideoVolume(int key, float vol){
@@ -689,6 +697,7 @@ void ofApp::playVideo(int key, float vel){
     if(!active_videos[key]){
       active_videos[key] = true;
       reset_videos[key] = true;
+      soundFader[key]->startThread();
       n_activeVideos++;
     }else if(sustain>0){
       // if video is already active and sustain is on (tapping)
@@ -709,7 +718,9 @@ void ofApp::playVideo(int key, float vel){
 
 void ofApp::deactivateVideo(int key){
   fo_start[key] = 0.0;
+  soundFader[key]->stopThread();
   active_videos[key] = false;
+
   //cout << "deactivating " << ofToString(key) << endl;
 
   // now the actual stop method is called by update()
@@ -1139,4 +1150,10 @@ void ofApp::keyReleased(int key){
   key = tolower(key);
   stopVideo(key-49);
   //cout << ofToString(key) << " released" << endl;
+}
+
+void ofApp::exit(){
+  for(int i=0;i<MAX_VIDEOS;i++){
+    soundFader[i]->stopThread();
+  }
 }
