@@ -28,6 +28,8 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		int max_videos;
 		int first_midinote;
     int midi_port;
+    int midi_port2=-1;
+
 		float fade_in;
 		float fade_out;
 		int sustain_mode;
@@ -55,6 +57,8 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 
 		void newMidiMessage(ofxMidiMessage& eventArgs);
 		ofxMidiIn midiIn;
+        ofxMidiIn midiIn2;
+
 		void setupMidi();
 
         ofVideoGrabber capture[MAX_CAPTURE];
@@ -79,7 +83,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		void initVideoVariables(int key);
 		void loadConfig(string path);
 		void loadDefaultConfig();
-		void loadDefaultMidiMappings();
+        void loadDefaultMidiMappings();
 		/*void loadDataDir();
 		void loadFolders();
 		void loadRandom();*/
@@ -113,7 +117,6 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		void keyPressed(int key);
 		void keyReleased(int key);
 
-		void exit();
 
 		float harmonicLoopBaseDur = 1.0;
 		const float semitoneToRatio[12] = {
@@ -150,7 +153,9 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 
 
 		float fo_start[MAX_VIDEOS];
-        float sound_fadeTime = 0.2;
+        float fi_start[MAX_VIDEOS];
+
+        float sound_fadeTime = 0.1;
 
 		float tapTempo[MAX_VIDEOS];
 		float tapSpeed[MAX_VIDEOS];
@@ -320,6 +325,7 @@ public:
   void setup(ofApp *controller,int key) {
     movieN = key;
     ctrl = controller;
+    ofAddListener(ofEvents().exit,this,&SoundFader::handleExit);
   }
 
   void threadedFunction() {
@@ -328,6 +334,13 @@ public:
       std::this_thread::sleep_for(std::chrono::milliseconds(deltams));
     }
   }
+    
+  void handleExit(ofEventArgs &e)
+  {
+        if(isThreadRunning())
+            waitForThread();
+  }
+
 
 private:
   ofApp *ctrl;

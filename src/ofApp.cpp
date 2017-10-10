@@ -32,6 +32,7 @@ void ofApp::setup(){
 
   //scanDataDir();
   findConfig();
+    
   sustain_mode = 0;
   midiMaxVal = 127;
   setupMidi();
@@ -84,21 +85,16 @@ void ofApp::findConfig(){
 
   loadDefaultConfig();
   if(dir.size()>0){
+    cout << "custom conf" << endl;
     loadConfigNew(dir.getPath(0));
   }
 }
 
 void ofApp::loadConfigNew(string path){
   Settings::get().load(path);
-  cout << "custom conf" << endl;
   string enclosingDir = ofFilePath::getEnclosingDirectory(path);
   if( Settings::get().exists("general")){
-      if(Settings::get().exists("general/first_midinote")){
-        first_midinote=Settings::getInt("general/first_midinote");
-      }
-      if(Settings::get().exists("general/midi_port")){
-          midi_port=Settings::getInt("general/midi_port");
-      }
+    
       if(Settings::get().exists("general/fade_in")){
         fade_in=Settings::getFloat("general/fade_in");
       }
@@ -114,7 +110,7 @@ void ofApp::loadConfigNew(string path){
   }
   if(Settings::get().exists("layouts")){
     // count folders, init layoutConf
-    n_layouts = 0; // TODO: change to n_layouts
+    n_layouts = 0;
     int thisFolder = 0;
     while(Settings::get().exists("layouts/"+std::to_string(thisFolder++))){
       n_layouts++;
@@ -197,22 +193,32 @@ void ofApp::loadConfigNew(string path){
 
 }
 
+void ofApp::loadDefaultMidiMappings(){
+    if(ofFile::doesFileExist(ofToDataPath("../../midi_mappings.json"))){
+        Settings::get().load(ofToDataPath("../../midi_mappings.json"));
+        loadMidiMappings();
+    }
+}
+
 void ofApp::loadMidiMappings(){
   // iterate midi keys
   for(std::map<string,int>::iterator iter = midiMappings.begin(); iter != midiMappings.end(); ++iter)
   {
     string k =  iter->first;
     int value = 0;
-    if(Settings::get().exists("mappings/"+k)){
-      value = Settings::getInt("mappings/"+k);
+    if(Settings::get().exists(k)){
+      value = Settings::getInt(k);
       midiMappings[k] = value;
       cout << k << ": " << value << endl;
     }
-    if(Settings::get().exists("mappings/first_midinote")){
+    if(Settings::get().exists("first_midinote")){
       first_midinote = Settings::getInt("mappings/first_midinote");
     }
-    if(Settings::get().exists("mappings/midi_port")){
+    if(Settings::get().exists("midi_port")){
       midi_port = Settings::getInt("mappings/midi_port");
+    }
+    if(Settings::get().exists("midi_port2")){
+          midi_port2=Settings::getInt("midi_port2");
     }
   }
 
@@ -227,14 +233,7 @@ void ofApp::loadDefaultConfig(){
   cout << "default midi mappings" << endl;
   loadDefaultMidiMappings();
   cout << "default conf" << endl;
-  loadConfigNew(ofToDataPath("../defaultConf.json"));
-}
-
-void ofApp::loadDefaultMidiMappings(){
-  if(ofFile::doesFileExist(ofToDataPath("../midi_mappings.json"))){
-    Settings::get().load(ofToDataPath("../midi_mappings.json"));
-    loadMidiMappings();
-  }
+  loadConfigNew(ofToDataPath("../../defaultConf.json"));
 }
 
 // ## load videos ##
@@ -244,6 +243,8 @@ void ofApp::initVideoVariables(int key){
   tapTempo[key] = 0;
   tapSpeed[key] = 1.0;
   fo_start[key] = 0;
+  fi_start[key] = 0;
+
   dyn[key] = 1;
   videoVolume[key] = 1;
   videoRms[key] = 1;
@@ -632,24 +633,31 @@ void ofApp::update(){
 
 void ofApp::soundFades(int i){
   // sound fade in
+    float now = ofGetElapsedTimef();
   float vol = 1;
   float vol_fo = 1;
-  if(((movie[i].getPosition()-startPos[i])*movie[i].getDuration())<sound_fadeTime){
-      vol = (movie[i].getPosition()-startPos[i])*movie[i].getDuration();
-      //cout << "pos: " << vol << endl;
-      vol = vol/sound_fadeTime;
+  //if(((movie[i].getPosition()-startPos[i])*movie[i].getDuration())<sound_fadeTime){
+  if((now-fi_start[i])<sound_fadeTime){
+
+      //vol = (movie[i].getPosition()-startPos[i])*movie[i].getDuration();
+      vol = (now - fi_start[i])/sound_fadeTime;
+      //cout << "pct: " << vol << endl;
+      vol = pow(vol,10);
+      //cout << "pow: " << vol << endl;
+      //vol = vol/sound_fadeTime;
   }
   // sound fade_out
   if(fo_start[i]>0){
       if(fade_out<=sound_fadeTime){
-          vol_fo = 1-((ofGetElapsedTimef()-fo_start[i])/sound_fadeTime);
+          vol_fo = 1-((now-fo_start[i])/sound_fadeTime);
       }else{
-          vol_fo = 1-((ofGetElapsedTimef()-fo_start[i])/fade_out);
+          vol_fo = 1-((now-fo_start[i])/fade_out);
 
       }
   }else{
      vol_fo = ((1-movie[i].getPosition())*movie[i].getDuration()/sound_fadeTime);
   }
+    vol_fo = pow(vol_fo,10);
 
   vol = vol <= 0 ? 0 : vol >= 1 ? 1 : vol;
   vol_fo = vol_fo <= 0 ? 0 : vol_fo >= 1 ? 1 : vol_fo;
@@ -702,6 +710,7 @@ void ofApp::playVideo(int key, float vel){
     if(dynIsVolume){videoVolume[key] = vel;};
       //setVideoVolume(key,1.0);
     fo_start[key] = 0;
+    fi_start[key] = ofGetElapsedTimef();
 
     if(!active_videos[key]){
       active_videos[key] = true;
@@ -901,8 +910,16 @@ float ofApp::harmonicLoopDur(int key){
 
 void ofApp::setupMidi(){
   //ofSetVerticalSync(true);
+  //ofSetLogLevel(OF_LOG_VERBOSE);
+
+  cout << "MIDI" << endl;
   midiIn.openPort(midi_port);
   midiIn.addListener(this);
+    cout << midi_port2 << endl;
+  if(midi_port2>=0){
+      midiIn2.openPort(midi_port2);
+      midiIn2.addListener(this);
+  }
 }
 
 //--------------------------------------------------------------
@@ -1159,10 +1176,4 @@ void ofApp::keyReleased(int key){
   key = tolower(key);
   stopVideo(key-49);
   //cout << ofToString(key) << " released" << endl;
-}
-
-void ofApp::exit(){
-  for(int i=0;i<MAX_VIDEOS;i++){
-    soundFader[i]->stopThread();
-  }
 }

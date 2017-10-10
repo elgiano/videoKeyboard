@@ -1,5 +1,5 @@
 #!/bin/python
-#/home/giano/projects/soren/videoKeyboardHap/bin/sets
+#/Users/sorenkjaergard/Documents/openFrameworks/apps/myApps/videoKeyboard-master/bin/sets
 
 from os import listdir, mkdir,rmdir, symlink, remove, rename
 from os.path import isdir, isfile, join, getsize, abspath, isabs,realpath, basename
@@ -272,7 +272,7 @@ class MyWindow(Gtk.Window):
             with open(defaultConfFile) as data_file:
                 try:
                     self.defaultConfig = json.load(data_file)
-                except json.decoder.JSONDecodeError:
+                except ValueError:
                     print("JSONDecodeError: "+confFile)
 
         self.midi_mappings = None
@@ -281,7 +281,7 @@ class MyWindow(Gtk.Window):
             with open(midi_mappings_file) as data_file:
                 try:
                     self.midi_mappings = json.load(data_file)
-                except json.decoder.JSONDecodeError:
+                except ValueError:
                     print("JSONDecodeError: "+confFile)
 
 
@@ -292,18 +292,19 @@ class MyWindow(Gtk.Window):
                 with open(confFile) as data_file:
                     try:
                         self.configs[i] = json.load(data_file)
-                    except json.decoder.JSONDecodeError:
+                    except ValueError:
                         print("JSONDecodeError: "+confFile)
 
         self.validateConfigs()
 
     def writeConfig(self,set_number):
-        path = join(self.setsDir,"../midi_mappings.json") if id==(-1) else join(self.setsDir,self.sets[set_number],"config.json")
-        conf = self.midi_mappings if id==(-1) else self.configs[set_number]
+        path = join(self.setsDir,"../midi_mappings.json") if set_number==(-1) else join(self.setsDir,self.sets[set_number],"config.json")
+        conf = self.midi_mappings if set_number==(-1) else self.configs[set_number]
         #path = join(self.setsDir,self.sets[set_number],"config.json")
+        print("id:"+str(set_number)+" writing "+path)
         with open(path,"w") as data_file:
             try:
-                json.dump(self.configs[set_number],data_file)
+                json.dump(conf,data_file)
             except:
                 pprint(exc_info())
 
@@ -325,8 +326,8 @@ class MyWindow(Gtk.Window):
                 with open(origConfFile) as data_file:
                     try:
                         origConf = json.load(data_file)
-                    except json.decoder.JSONDecodeError:
-                        print("JSONDecodeError: "+confFile)
+                    except ValueError:
+                        print("JSONDecodeError: "+origConfFile)
             if origConf != self.configs[i]:
                 unsavedList.append([i,set])
         mm = self.findUnsavedMappings()
@@ -341,8 +342,8 @@ class MyWindow(Gtk.Window):
             with open(origConfFile) as data_file:
                 try:
                     origConf = json.load(data_file)
-                except json.decoder.JSONDecodeError:
-                    print("JSONDecodeError: "+confFile)
+                except ValueError:
+                    print("JSONDecodeError: "+origConfFile)
         if origConf != self.midi_mappings:
             return [-1,"Midi Mappings"]
         else:
