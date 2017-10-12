@@ -148,6 +148,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		bool sustained_videos[MAX_VIDEOS];
     bool sostenuto_videos[MAX_VIDEOS];
     bool sostenutoFreeze_videos[MAX_VIDEOS];
+    bool ribattutoSpeed = false;
 
 		SoundFader* soundFader[MAX_VIDEOS];
 
@@ -211,7 +212,8 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
       switch_to_set_2,
       switch_to_set_3,
       switch_to_set_4,
-      switch_to_set_5
+      switch_to_set_5,
+            ribattutoSpeed,
 		};
 
 		std::map<string, MidiCommand> midiMappingsStringsToCommand = {
@@ -252,6 +254,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
      {"switch_to_set_3", MidiCommand::switch_to_set_3 },
      {"switch_to_set_4", MidiCommand::switch_to_set_4 },
      {"switch_to_set_5", MidiCommand::switch_to_set_5 },
+     {"ribattutoSpeed", MidiCommand::ribattutoSpeed }
 
 
 		};
@@ -295,6 +298,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
      {"switch_to_set_3", 49 },
      {"switch_to_set_4", 50 },
      {"switch_to_set_5", 51 },
+            {"ribattutoSpeed", 52 }
 		};
 
 

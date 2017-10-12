@@ -717,7 +717,7 @@ void ofApp::playVideo(int key, float vel){
       reset_videos[key] = true;
       soundFader[key]->startThread();
       n_activeVideos++;
-    }else if(sustain>0){
+    }else if(sustain>0 && ribattutoSpeed){
       // if video is already active and sustain is on (tapping)
       float now = ofGetElapsedTimef();
       tapToSpeed(now-tapTempo[key],key);
@@ -791,12 +791,12 @@ void ofApp::changeAllSpeed(float control){
         scaled =pow(3,ofMap(abs(control-0.5),0,0.5,-2,2))*-((control-0.5)>0?-1:1);
     }*/
   if(control>=0){
-    speed = scaled * (speed_reverse?1:(-1));
+      speed = scaled * (speed_reverse?(-1):1);
   }else{
     // only update speed direction if control < 0
-    speed = speed * (speed_reverse?1:(-1));
+    speed = speed * (speed_reverse?(-1):1);
   }
-  //cout << "scaled: "<< ofToString(scaled) << endl;
+  cout << "scaled: "<< ofToString(scaled) << endl;
 }
 
 void ofApp::changeAllVolume(float control){
@@ -830,10 +830,10 @@ void ofApp::decayDyn(){
 float ofApp::tapToSpeed(float t,int k){
   float newSpeed = 1.0;
   if(t>0 && t<= 10){
-    newSpeed = 1.0/ofMap(t,0.2,10,0.01,50);
+      newSpeed = pow(ofMap(t,0,10,1,0),10)*20;
   }
   tapSpeed[k] = newSpeed;
-  //cout << ofToString(tapSpeed[k]) << endl;
+  cout << t << " " << ofToString(tapSpeed[k]) << endl;
   return tapSpeed[k];
 };
 
@@ -976,18 +976,18 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
               cout << "sustain" << endl;
               switch (sustain_mode) {
                 case 0:
-                  sustain = (midiMaxVal-msg.value)/midiMaxVal;
+                  sustain = (msg.value)/midiMaxVal;
                   if(sustain==0){stopSustain();};
                   break;
                 case 1:
                   cout << "sostenuto" << endl;
-                  sostenuto = (midiMaxVal-msg.value)/midiMaxVal;
+                  sostenuto = (msg.value)/midiMaxVal;
                   if(sostenuto==0){stopSostenuto();}
                   if(sostenuto==1){startSostenuto();}
                   break;
                 case 2:
                   cout << "sostenutoFreeze" << endl;
-                  sostenutoFreeze = (midiMaxVal-msg.value)/midiMaxVal;
+                  sostenutoFreeze = (msg.value)/midiMaxVal;
                   if(sostenutoFreeze==0){stopSostenutoFreeze();}
                   if(sostenutoFreeze==1){startSostenutoFreeze();}
                   break;
@@ -995,7 +995,7 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
               break;
       			case MidiCommand::sostenuto:
               cout << "sostenuto" << endl;
-              sostenuto = (midiMaxVal-msg.value)/midiMaxVal;
+              sostenuto = (msg.value)/midiMaxVal;
               if(sostenuto==0){stopSostenuto();}
               if(sostenuto==1){startSostenuto();}
               break;
@@ -1005,21 +1005,16 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
               if(sostenutoFreeze==1){startSostenutoFreeze();}
               break;
       			case MidiCommand::dynamics_switch:
-              isDynamic = !isDynamic;
+                  isDynamic = msg.value!=0;
               ofLogVerbose("dynamics_switch: " + ofToString(isDynamic));
               break;
       			case MidiCommand::fade_switch:
-                  if(msg.value == midiMaxVal){
-                  isFading = !isFading;
+                  isFading = msg.value!=0 ;
                   ofLogVerbose("fading_switch: " + ofToString(isFading));
-                  }
-                  break;
+                break;
               case MidiCommand::blending_multiply_switch:
-                  if(msg.value == midiMaxVal){
-                           blending_multiply = !blending_multiply;
+                           blending_multiply = msg.value!=0;
                       cout << "multiply " << blending_multiply<< endl;
-
-                      }
               break;
       			case MidiCommand::source_shuffle_switch:
               // TODO: not implemented
@@ -1045,39 +1040,29 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
               break;
               case MidiCommand::speed_dynamics:
                   cout << "dynIsSpeed" << endl;
-                  if(msg.value==midiMaxVal){
-                      dynIsSpeed = !dynIsSpeed;
+                      dynIsSpeed = msg.value!=0;
                       cout << "dynIsSpeed " << dynIsSpeed << endl;
-                  }
-                  break;
+                      break;
               case MidiCommand::layout_shuffle:
-                  if(msg.value==midiMaxVal){
-                      layoutShuffle = !layoutShuffle;
+                      layoutShuffle = msg.value!=0;
                       cout << "layout shuffle " <<layoutShuffle << endl;
-                  }
-                  break;
+                    break;
               case MidiCommand::dynamics_decay:
-                  if(msg.value==midiMaxVal){
-                    dynIsDecaying = !dynIsDecaying;
+                    dynIsDecaying = msg.value!=0;
                     cout << "dynDecay " << dynIsDecaying << endl;
 
-                  }
                   break;
               case MidiCommand::global_volume:
                   changeAllVolume((float)msg.value/midiMaxVal);
                   cout << "global_volume "<< volume << endl;
                   break;
               case MidiCommand::dynamics_volume:
-                  if(msg.value==midiMaxVal){
-                      dynIsVolume = !dynIsVolume;
+                      dynIsVolume = msg.value!=0;
                       cout << "dynIsVolume "<< dynIsVolume << endl;
-                  }
-                  break;
+                    break;
               case MidiCommand::rms_normalize:
-                  if(msg.value==midiMaxVal){
-                    rms_mode = !rms_mode;
+                    rms_mode = msg.value!=0;
                     cout << "rms_mode "<< rms_mode << endl;
-                  }
                   break;
               case MidiCommand::stutter_mode:
                   //stutterMode = !stutterMode;
@@ -1092,7 +1077,7 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
                   cout << "stutter_mode:" << stutterMode << endl;
                   break;
               case MidiCommand::harmonic_loops:
-                  harmonic_loops = !harmonic_loops;
+                  harmonic_loops = msg.value!=0;
                   cout << "harmonic_loops:" << harmonic_loops << endl;
                   break;
               case MidiCommand::harmonic_loop_base_dur:
@@ -1146,6 +1131,10 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
               case MidiCommand::switch_to_set_5:
                   activeSet = 5%loadedSets;
                   cout << "activeSet " << ofToString(activeSet)<< endl;
+                  break;
+              case MidiCommand::ribattutoSpeed:
+                  ribattutoSpeed = msg.value!=0;
+                  cout << "ribattutoSpeed " << ofToString(ribattutoSpeed)<< endl;
                   break;
           }
       midiMaxVal = 127; // reset maxVal to control
