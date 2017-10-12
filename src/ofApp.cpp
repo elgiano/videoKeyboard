@@ -959,7 +959,7 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
               cout << "speed" << endl;
               break;
             case MidiCommand::speed_reverse:
-              speed_reverse = msg.value < (midiMaxVal/2);
+                  speed_reverse = msg.value > (midiMaxVal/2);
               changeAllSpeed(-1); // only update direction;
               cout << "speed reverse:" << speed_reverse << endl;
               break;
