@@ -22,3 +22,8 @@ videoKeyboard.xcodeproj/xcshareddata/xcschemes/videoKeyboard Debug.xcscheme
 videoKeyboard.xcodeproj/project.xcworkspace/xcuserdata/sorenkjaergaard.xcuserdatad/UserInterfaceState.xcuserstate
 Makefile
 config.make
+.DS_Store
+addons.make
+bin/defaultConf.json
+config.make
+Makefile
