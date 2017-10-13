@@ -722,17 +722,17 @@ void ofApp::panic(){
 void ofApp::playVideo(int key, float vel){
   //key = key % n_videos;
   //key = setStart[activeSet] + key;
-  if(activeSet < (loadedSets-1)){
+  /*if(activeSet < (loadedSets-1)){
       key = setStart[activeSet] + (key%(setStart[activeSet+1]-setStart[activeSet]));
   }else{
       key = setStart[activeSet] + (key%(n_videos-setStart[activeSet]));
-  }
+  }*/
   cout << "playing video KEY:" << key << " of set:" << activeSet << " setstart:" << setStart[activeSet] << endl;
   //ofLog(OF_LOG_VERBOSE,"starting video " + ofToString(key));
   if(key>=0 && key < MAX_VIDEOS){
     // update dynamics and stop fade_out
     dyn[key] = vel;
-    if(dynIsVolume){videoVolume[key] = vel;};
+      videoVolume[key] = dynIsVolume ? vel : 1.0;
       //setVideoVolume(key,1.0);
     fo_start[key] = 0;
     fi_start[key] = ofGetElapsedTimef();
@@ -774,11 +774,7 @@ void ofApp::deactivateVideo(int key){
 void ofApp::stopVideo(int key){
   //key = key % n_videos;
   //key = setStart[activeSet] + key;
-  if(activeSet < (loadedSets-1)){
-    key = setStart[activeSet] + (key%(setStart[activeSet+1]-setStart[activeSet]));
-  }else{
-    key = setStart[activeSet] + key%(n_videos-setStart[activeSet]);
-  }
+  
   ofLog(OF_LOG_VERBOSE, "stopping video " + ofToString(key));
 
   if(key>=0 && key < MAX_VIDEOS){
@@ -792,6 +788,8 @@ void ofApp::stopVideo(int key){
 
       }else{
           if(sustain>0){
+              cout << "sustaining: "<< ofToString(key) << endl;
+
               sustained_videos[key] = true;
           }
           if(sostenuto>0){
@@ -866,9 +864,12 @@ float ofApp::tapToSpeed(float t,int k){
 // ## SUSTAINs ##
 
 void ofApp::stopSustain(){
-    for(int i=0;i<MAX_VIDEOS;i++){tapSpeed[i]=1.0;};
+  for(int i=0;i<MAX_VIDEOS;i++){tapSpeed[i]=1.0;};
+  cout << "stop sustain" << endl;
+
   for(int i=0;i<MAX_VIDEOS;i++){
     if(sustained_videos[i]){
+      cout << "stop sustain " << i << endl;
       stopVideo(i);
       sustained_videos[i] = false;
     }
@@ -947,6 +948,16 @@ void ofApp::setupMidi(){
   }
 }
 
+int ofApp::midiNoteToVideoKey(int note){
+    int key;
+    if(activeSet < (loadedSets-1)){
+        key = setStart[activeSet] + (note%(setStart[activeSet+1]-setStart[activeSet]));
+    }else{
+        key = setStart[activeSet] + (note%(n_videos-setStart[activeSet]));
+    }
+    return key;
+}
+
 //--------------------------------------------------------------
 void ofApp::newMidiMessage(ofxMidiMessage& msg) {
 
@@ -955,12 +966,11 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
   switch(msg.status) {
     case MIDI_NOTE_ON :
       if(msg.velocity>0){
-          cout << msg.pitch << "#" << first_midinote << endl;
-        playVideo(msg.pitch-first_midinote,(float) msg.velocity/127);
+        playVideo(midiNoteToVideoKey(msg.pitch-first_midinote),(float) msg.velocity/127);
         break;
       }
     case MIDI_NOTE_OFF:
-      stopVideo(msg.pitch-first_midinote);
+      stopVideo(midiNoteToVideoKey(msg.pitch-first_midinote));
       break;
     case MIDI_POLY_AFTERTOUCH:
       //cout << msg.value << endl;

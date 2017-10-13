@@ -55,6 +55,9 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 
 		ofLoopType loopState = OF_LOOP_NORMAL;
 		ofColor videoColor;
+    
+        int midiNoteToVideoKey(int note);
+
 
 		void newMidiMessage(ofxMidiMessage& eventArgs);
 		ofxMidiIn midiIn;
