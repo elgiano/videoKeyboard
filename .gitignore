@@ -5,3 +5,20 @@ src/.DS_Store
 aubiocut
 aubiocut.bak
 Makefile
+videoKeyboard.xcodeproj/project.pbxproj
+videoKeyboard.xcodeproj/project.xcworkspace/contents.xcworkspacedata
+Project.xcconfig
+openFrameworks-Info.plist
+config.make
+config.make
+Makefile
+config.make
+addons.make
+.DS_Store
+videoKeyboard.xcodeproj/xcuserdata/sorenkjaergaard.xcuserdatad/xcschemes/xcschememanagement.plist
+videoKeyboard.xcodeproj/xcuserdata/sorenkjaergaard.xcuserdatad/xcdebugger/Breakpoints_v2.xcbkptlist
+videoKeyboard.xcodeproj/xcshareddata/xcschemes/videoKeyboard Release.xcscheme
+videoKeyboard.xcodeproj/xcshareddata/xcschemes/videoKeyboard Debug.xcscheme
+videoKeyboard.xcodeproj/project.xcworkspace/xcuserdata/sorenkjaergaard.xcuserdatad/UserInterfaceState.xcuserstate
+Makefile
+config.make

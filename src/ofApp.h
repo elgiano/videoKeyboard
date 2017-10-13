@@ -8,7 +8,7 @@
 #include "ofxJsonSettings.h"
 #include "ofxHapPlayer.h"
 
-#define MAX_VIDEOS 255
+#define MAX_VIDEOS 512
 #define MAX_SETS 8
 
 #define MAX_CAPTURE 2
@@ -34,6 +34,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		float fade_out;
 		int sustain_mode;
 		int brightness;
+        int brightness_opacity;
 
 		bool blending_multiply;
 		bool isDynamic = false;
@@ -77,6 +78,8 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		void draw();
 
         void drawVideoInLayout(int movieN);
+    void drawBrightnessLayer(int x, int y, int w, int h);
+
 
 		void findConfig();
 		void scanDataDir();
@@ -181,6 +184,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 			global_speed,
 			layout_change,
 			brightness,
+            brightness_opacity,
 			sustain,
 			sostenuto,
 			sostenuto_freeze,
@@ -214,6 +218,8 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
       switch_to_set_4,
       switch_to_set_5,
             ribattutoSpeed,
+            panic,
+            sound_fade_time
 		};
 
 		std::map<string, MidiCommand> midiMappingsStringsToCommand = {
@@ -222,6 +228,8 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		 {"global_speed", MidiCommand::global_speed},
 		 {"layout_change", MidiCommand::layout_change},
 		 {"brightness" , MidiCommand::brightness},
+         {"brightness_opacity" , MidiCommand::brightness_opacity},
+
 		 {"sustain", MidiCommand::sustain},
 		 {"sostenuto", MidiCommand::sostenuto},
 		 {"sostenuto_freeze", MidiCommand::sostenuto_freeze},
@@ -254,7 +262,11 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
      {"switch_to_set_3", MidiCommand::switch_to_set_3 },
      {"switch_to_set_4", MidiCommand::switch_to_set_4 },
      {"switch_to_set_5", MidiCommand::switch_to_set_5 },
-     {"ribattutoSpeed", MidiCommand::ribattutoSpeed }
+     {"ribattutoSpeed", MidiCommand::ribattutoSpeed },
+            {"panic", MidiCommand::panic },
+            {"sound_fade_time", MidiCommand::sound_fade_time }
+
+
 
 
 		};
@@ -298,7 +310,13 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
      {"switch_to_set_3", 49 },
      {"switch_to_set_4", 50 },
      {"switch_to_set_5", 51 },
-            {"ribattutoSpeed", 52 }
+            {"ribattutoSpeed", 52 },
+            {"panic", 53 },
+            {"brightness_opacity" , 54},
+            {"sound_fade_time" , 55},
+
+
+
 		};
 
 

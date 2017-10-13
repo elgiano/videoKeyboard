@@ -19,6 +19,7 @@ void ofApp::setup(){
   layout = 0;
 
   brightness = 0;
+  brightness_opacity = 0;
   lastDecayTime = 0;
 
 
@@ -212,10 +213,10 @@ void ofApp::loadMidiMappings(){
       cout << k << ": " << value << endl;
     }
     if(Settings::get().exists("first_midinote")){
-      first_midinote = Settings::getInt("mappings/first_midinote");
+      first_midinote = Settings::getInt("first_midinote");
     }
     if(Settings::get().exists("midi_port")){
-      midi_port = Settings::getInt("mappings/midi_port");
+      midi_port = Settings::getInt("midi_port");
     }
     if(Settings::get().exists("midi_port2")){
           midi_port2=Settings::getInt("midi_port2");
@@ -444,12 +445,12 @@ void ofApp::drawVideoInLayout(int movieN){
       thisLayoutInit[layoutPos] = thisLayoutInit[layoutPos] + 1 ;
     }else{
 
-        // draw brightness layer
+        /* draw brightness layer
         ofEnableAlphaBlending();
-        ofSetColor(brightness, brightness, brightness, 32);
-        ofDrawRectangle(0, 0, ofGetWidth(), ofGetHeight());
+        ofSetColor(brightness, brightness, brightness, brightness_opacity);
+        ofDrawRectangle(0, 0, ofGetWidth(), ofGetHeight());*/
 
-      ofEnableBlendMode(OF_BLENDMODE_MULTIPLY);
+        ofEnableBlendMode(OF_BLENDMODE_MULTIPLY);
       //cout << ofToString(thisLayoutInit[layoutPos])<< " pos"<< ofToString(layoutPos) << endl;
     }
     videoColor.set(255,255,255,255*fi_alpha*fo_alpha*thisDyn);
@@ -491,38 +492,55 @@ void ofApp::drawVideoInLayout(int movieN){
   switch(abs(layout)){
     case 0:
       thisTexture.draw(0,(screenH-(screenW*h/w))/2, screenW, screenW*h/w);
+          if(blending_multiply){drawBrightnessLayer(0,(screenH-(screenW*h/w))/2, screenW, screenW*h/w);}
+
       break;
     case 1:
       // Split screen vertical
       //movie[movieN].draw(screenW/2*layoutPos,(screenH-(screenW/2*h/w))/2, screenW/2, screenW/2*h/w);
      thisTexture.drawSubsection(screenW/2*layoutPos,0,screenW/2,screenH,((screenH*w/h)-(screenW/2))*w/screenW/2,0,w*(1-((screenH*w/h)-(screenW/2))/screenW),h);
+          if(blending_multiply){drawBrightnessLayer(screenW/2*layoutPos,0,screenW/2,screenH);}
+
       break;
     case 2:
       // Split screen horizontal
-      //movie[movieN].draw((screenW-(screenH/2*w/h))/2,screenH/2*layoutPos, screenH/2*w/h, screenH/2);
+      //movie[movieN].draw((screenW-(screenH/2*w/h))/2,screenH/2*layoutPos, screenH/2*w/h, screenH/2)
       thisTexture.drawSubsection(0,screenH/2*layoutPos,screenW,screenH/2,0,((screenW*h/w)-(screenH/2))*h/screenH/2,w,h*(1-((screenW*h/w)-(screenH/2))/screenH));
+      if(blending_multiply){drawBrightnessLayer(0,screenH/2*layoutPos,screenW,screenH/2);}
+
       break;
     case 3:
       // Split screen vertical and horizontal once
         if (layoutPos<2) {
           thisTexture.draw(screenW/2*layoutPos,(screenH/2-(screenW/2*h/w))/2+(layout>0?0:screenH/2), screenW/2, screenW/2*h/w);
+          if(blending_multiply){drawBrightnessLayer(screenW/2*layoutPos,(screenH/2-(screenW/2*h/w))/2+(layout>0?0:screenH/2), screenW/2, screenW/2*h/w);}
         }else{
+
           thisTexture.drawSubsection(0,(layout>0?screenH/2:0),screenW,screenH/2,0,((screenW*h/w)-(screenH/2))*h/screenH/2,w,h*(1-((screenW*h/w)-(screenH/2))/screenH));
+          if(blending_multiply){drawBrightnessLayer(0,(layout>0?screenH/2:0),screenW,screenH/2);}
+
         };
       break;
     case 4:
     //triptych
           // x0,y0,w,h,
           // sx0,sy0, sw,sh
+
           thisTexture.drawSubsection(screenW/3*layoutPos,0,screenW/3,screenH,
                 w/3,0,w/3,h
           );
+          if(blending_multiply){drawBrightnessLayer(screenW/3*layoutPos,0,screenW/3,screenH);}
+
           break;
     case 5:
       // split in 4
+          
       thisTexture.draw(screenW/2*(layoutPos%2),
                         (screenH/2*(layoutPos/2%2))+(screenH/2-(screenW/2*h/w))/2,
                         screenW/2, screenW/2*h/w);
+          if(blending_multiply){drawBrightnessLayer(screenW/2*(layoutPos%2),
+                                                    (screenH/2*(layoutPos/2%2))+(screenH/2-(screenW/2*h/w))/2,
+                                                    screenW/2, screenW/2*h/w);}
 
 
   }
@@ -531,6 +549,13 @@ void ofApp::drawVideoInLayout(int movieN){
 
 }
 
+void ofApp::drawBrightnessLayer(int x, int y, int w, int h){
+    
+    ofEnableBlendMode(OF_BLENDMODE_ADD);
+    ofSetColor(brightness, brightness, brightness);
+    ofDrawRectangle(x, y, w, h);
+
+}
 
 //--------------------------------------------------------------
 void ofApp::draw(){
@@ -575,7 +600,7 @@ void ofApp::update(){
   for(int i=0;i<MAX_VIDEOS;i++){
     if(active_videos[i] or sostenuto_videos[i] or sostenutoFreeze_videos[i]){
         if(!movie[i].isPlaying()){
-            movie[i].setSpeed(speed*tapSpeed[i]);
+            movie[i].setSpeed(speed*(ribattutoSpeed?tapSpeed[i]:1));
             movie[i].setPosition(startPos[i]);
             movie[i].play();
         }else{
@@ -583,9 +608,9 @@ void ofApp::update(){
                 captureFromKey(i).update();
             }else{
               if(dynIsSpeed){
-                movie[i].setSpeed(speed*tapSpeed[i]*dynToSpeed(i));
+                movie[i].setSpeed(speed*dynToSpeed(i)*(ribattutoSpeed?tapSpeed[i]:1));
               }else{
-                movie[i].setSpeed(speed*tapSpeed[i]);
+                movie[i].setSpeed(speed*(ribattutoSpeed?tapSpeed[i]:1));
               }
               /*if(sostenutoFreeze_videos[i]){
                   movie[i].setPaused(true);
@@ -687,7 +712,7 @@ void ofApp::setVideoVolume(int key, float vol){
 
 void ofApp::panic(){
   for(int i=0;i<MAX_VIDEOS;i++){
-    active_videos[i] = false;
+    //active_videos[i] = false;
     //movie[i].stop();
     deactivateVideo(i);
     //movie[i].setPosition(0);
@@ -696,11 +721,11 @@ void ofApp::panic(){
 
 void ofApp::playVideo(int key, float vel){
   //key = key % n_videos;
-  key = setStart[activeSet] + key;
+  //key = setStart[activeSet] + key;
   if(activeSet < (loadedSets-1)){
-    key = setStart[activeSet] + (key%(setStart[activeSet+1]-setStart[activeSet]));
+      key = setStart[activeSet] + (key%(setStart[activeSet+1]-setStart[activeSet]));
   }else{
-    key = setStart[activeSet] + key%(n_videos-setStart[activeSet]);
+      key = setStart[activeSet] + (key%(n_videos-setStart[activeSet]));
   }
   cout << "playing video KEY:" << key << " of set:" << activeSet << " setstart:" << setStart[activeSet] << endl;
   //ofLog(OF_LOG_VERBOSE,"starting video " + ofToString(key));
@@ -748,7 +773,7 @@ void ofApp::deactivateVideo(int key){
 }
 void ofApp::stopVideo(int key){
   //key = key % n_videos;
-  key = setStart[activeSet] + key;
+  //key = setStart[activeSet] + key;
   if(activeSet < (loadedSets-1)){
     key = setStart[activeSet] + (key%(setStart[activeSet+1]-setStart[activeSet]));
   }else{
@@ -791,12 +816,12 @@ void ofApp::changeAllSpeed(float control){
         scaled =pow(3,ofMap(abs(control-0.5),0,0.5,-2,2))*-((control-0.5)>0?-1:1);
     }*/
   if(control>=0){
-      speed = scaled * (speed_reverse?(-1):1);
+      speed = abs(scaled) * (speed_reverse?(-1):1);
   }else{
     // only update speed direction if control < 0
-    speed = speed * (speed_reverse?(-1):1);
+    speed = abs(speed) * (speed_reverse?(-1):1);
   }
-  cout << "scaled: "<< ofToString(scaled) << endl;
+  cout << "scaled: "<< ofToString(speed) << endl;
 }
 
 void ofApp::changeAllVolume(float control){
@@ -899,10 +924,10 @@ void ofApp::stopSostenutoFreeze(){
 // ###
 
 float ofApp::harmonicLoopDur(int key){
-  int octave = floor(key/12);
-  float ratio = semitoneToRatio[(first_midinote + key) % 12] ;
+  int octave = floor((key - setStart[activeSet])/12);
+  float ratio = semitoneToRatio[(first_midinote + key - setStart[activeSet]) % 12] ;
   float dur = harmonicLoopBaseDur / (ratio * octave);
-  cout << dur << " = " << harmonicLoopBaseDur << " / (" << ratio << "x" << octave << ")" << endl;
+    cout << dur << " = " << harmonicLoopBaseDur << " / (" << ratio << "x" << octave << ")" << endl;
   return harmonicLoopBaseDur / (ratio * octave);
 }
 
@@ -930,6 +955,7 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
   switch(msg.status) {
     case MIDI_NOTE_ON :
       if(msg.velocity>0){
+          cout << msg.pitch << "#" << first_midinote << endl;
         playVideo(msg.pitch-first_midinote,(float) msg.velocity/127);
         break;
       }
@@ -959,7 +985,7 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
               cout << "speed" << endl;
               break;
             case MidiCommand::speed_reverse:
-                  speed_reverse = msg.value > (midiMaxVal/2);
+              speed_reverse = msg.value > (midiMaxVal/2);
               changeAllSpeed(-1); // only update direction;
               cout << "speed reverse:" << speed_reverse << endl;
               break;
@@ -970,8 +996,11 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
       			case MidiCommand::brightness:
               brightness = (int)round((float)msg.value/midiMaxVal*255);
               cout << "brightness " << ofToString(brightness)<< endl;
-
               break;
+              case MidiCommand::brightness_opacity:
+                  brightness_opacity = (int)round((float)msg.value/midiMaxVal*255);
+                  cout << "brightness transp: " << ofToString(brightness_opacity)<< endl;
+                  break;
       			case MidiCommand::sustain:
               cout << "sustain" << endl;
               switch (sustain_mode) {
@@ -1135,6 +1164,14 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
               case MidiCommand::ribattutoSpeed:
                   ribattutoSpeed = msg.value!=0;
                   cout << "ribattutoSpeed " << ofToString(ribattutoSpeed)<< endl;
+                  break;
+              case MidiCommand::panic:
+                  panic();
+                  cout << "panic " << endl;
+                  break;
+              case MidiCommand::sound_fade_time:
+                  sound_fadeTime = pow((float)msg.value/midiMaxVal,10);
+                  cout << "sound_fadeTime:" << sound_fadeTime << endl;
                   break;
           }
       midiMaxVal = 127; // reset maxVal to control
