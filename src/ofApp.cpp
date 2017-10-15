@@ -452,9 +452,9 @@ void ofApp::drawVideoInLayout(int movieN){
   if(blending_multiply){
     // the background video is added, the rest are multiplied
     if(thisLayoutInit[layoutPos]==0){
-      ofEnableBlendMode(OF_BLENDMODE_ADD);
+      ofEnableBlendMode(OF_BLENDMODE_MULTIPLY);
       //cout << "FIRST LAYER" << ofToString(layoutPos) << endl;
-      thisLayoutInit[layoutPos] = thisLayoutInit[layoutPos] + 1 ;
+      //thisLayoutInit[layoutPos]++ ;
     }else{
 
         /* draw brightness layer
@@ -497,6 +497,9 @@ void ofApp::drawVideoInLayout(int movieN){
   // actual drawing in layout
   switch(abs(layout)){
     case 0:
+          if(blending_multiply && thisLayoutInit[layoutPos]++==0){
+              drawWhiteBg(0,(screenH-(screenW*h/w))/2, screenW, screenW*h/w);
+          }
       thisTexture.draw(0,(screenH-(screenW*h/w))/2, screenW, screenW*h/w);
           if(blending_multiply){drawBrightnessLayer(0,(screenH-(screenW*h/w))/2, screenW, screenW*h/w);}
 
@@ -504,6 +507,9 @@ void ofApp::drawVideoInLayout(int movieN){
     case 1:
       // Split screen vertical
       //movie[movieN].draw(screenW/2*layoutPos,(screenH-(screenW/2*h/w))/2, screenW/2, screenW/2*h/w);
+          if(blending_multiply && thisLayoutInit[layoutPos]++==0){
+              drawWhiteBg(screenW/2*layoutPos,0,screenW/2,screenH);
+          }
      thisTexture.drawSubsection(screenW/2*layoutPos,0,screenW/2,screenH,((screenH*w/h)-(screenW/2))*w/screenW/2,0,w*(1-((screenH*w/h)-(screenW/2))/screenW),h);
           if(blending_multiply){drawBrightnessLayer(screenW/2*layoutPos,0,screenW/2,screenH);}
 
@@ -511,6 +517,9 @@ void ofApp::drawVideoInLayout(int movieN){
     case 2:
       // Split screen horizontal
       //movie[movieN].draw((screenW-(screenH/2*w/h))/2,screenH/2*layoutPos, screenH/2*w/h, screenH/2)
+          if(blending_multiply && thisLayoutInit[layoutPos]++==0){
+              drawWhiteBg(0,screenH/2*layoutPos,screenW,screenH/2);
+          }
       thisTexture.drawSubsection(0,screenH/2*layoutPos,screenW,screenH/2,0,((screenW*h/w)-(screenH/2))*h/screenH/2,w,h*(1-((screenW*h/w)-(screenH/2))/screenH));
       if(blending_multiply){drawBrightnessLayer(0,screenH/2*layoutPos,screenW,screenH/2);}
 
@@ -518,10 +527,15 @@ void ofApp::drawVideoInLayout(int movieN){
     case 3:
       // Split screen vertical and horizontal once
         if (layoutPos<2) {
+            if(blending_multiply && thisLayoutInit[layoutPos]++==0){
+                drawWhiteBg(screenW/2*layoutPos,(screenH/2-(screenW/2*h/w))/2+(layout>0?0:screenH/2), screenW/2, screenW/2*h/w);
+            }
           thisTexture.draw(screenW/2*layoutPos,(screenH/2-(screenW/2*h/w))/2+(layout>0?0:screenH/2), screenW/2, screenW/2*h/w);
           if(blending_multiply){drawBrightnessLayer(screenW/2*layoutPos,(screenH/2-(screenW/2*h/w))/2+(layout>0?0:screenH/2), screenW/2, screenW/2*h/w);}
         }else{
-
+            if(blending_multiply && thisLayoutInit[layoutPos]++==0){
+                drawWhiteBg(0,(layout>0?screenH/2:0),screenW,screenH/2);
+            }
           thisTexture.drawSubsection(0,(layout>0?screenH/2:0),screenW,screenH/2,0,((screenW*h/w)-(screenH/2))*h/screenH/2,w,h*(1-((screenW*h/w)-(screenH/2))/screenH));
           if(blending_multiply){drawBrightnessLayer(0,(layout>0?screenH/2:0),screenW,screenH/2);}
 
@@ -531,7 +545,9 @@ void ofApp::drawVideoInLayout(int movieN){
     //triptych
           // x0,y0,w,h,
           // sx0,sy0, sw,sh
-
+          if(blending_multiply && thisLayoutInit[layoutPos]++==0){
+              drawWhiteBg(screenW/3*layoutPos,0,screenW/3,screenH);
+          }
           thisTexture.drawSubsection(screenW/3*layoutPos,0,screenW/3,screenH,
                 w/3,0,w/3,h
           );
@@ -540,7 +556,11 @@ void ofApp::drawVideoInLayout(int movieN){
           break;
     case 5:
       // split in 4
-          
+          if(blending_multiply && thisLayoutInit[layoutPos]++==0){
+              drawWhiteBg(screenW/2*(layoutPos%2),
+                          (screenH/2*(layoutPos/2%2))+(screenH/2-(screenW/2*h/w))/2,
+                          screenW/2, screenW/2*h/w);
+          }
       thisTexture.draw(screenW/2*(layoutPos%2),
                         (screenH/2*(layoutPos/2%2))+(screenH/2-(screenW/2*h/w))/2,
                         screenW/2, screenW/2*h/w);
@@ -553,13 +573,19 @@ void ofApp::drawVideoInLayout(int movieN){
 
 
 
+
 }
 
 void ofApp::drawBrightnessLayer(int x, int y, int w, int h){
-    
     ofEnableBlendMode(OF_BLENDMODE_ADD);
     ofSetColor(brightness, brightness, brightness);
     ofDrawRectangle(x, y, w, h);
+}
+void ofApp::drawWhiteBg(int x, int y, int w, int h){
+    ofEnableBlendMode(OF_BLENDMODE_ADD);
+    ofSetColor(255, 255, 255);
+    ofDrawRectangle(x, y+1, w, h-1);
+    ofEnableBlendMode(OF_BLENDMODE_MULTIPLY);
 
 }
 
@@ -723,9 +749,12 @@ void ofApp::soundFades(int i){
 
 void ofApp::setVideoVolume(int key, float vol){
   if(rms_mode){
-    movie[key].setVolume(vol*volume*videoVolume[key]*setAvgRms[setNumberFromKey(key)]/videoRms[key]);
-      cout << "#"<<key<< " volume " << vol*volume*videoVolume[key]*setAvgRms[setNumberFromKey(key)]/videoRms[key] <<  " correction " << videoRms[key] << endl;
-      cout << "set " << setNumberFromKey(key) << " avg: " << setAvgRms[setNumberFromKey(key)] << endl;
+      float correction = setAvgRms[setNumberFromKey(key)]/videoRms[key];
+      correction = 1+((correction-1)*rms_correction_pct);
+    movie[key].setVolume(vol*volume*videoVolume[key]*correction);
+      /*cout << "#"<<key<< " volume " << vol*volume*videoVolume[key]*setAvgRms[setNumberFromKey(key)]/videoRms[key] <<  " correction " << videoRms[key] << endl;
+      cout << "set " << setNumberFromKey(key) << " avg: " << setAvgRms[setNumberFromKey(key)] << endl;*/
+      //cout << "correction " << correction << endl;
   }else{
     movie[key].setVolume(vol*volume*videoVolume[key]);
   }
@@ -1206,6 +1235,10 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
               case MidiCommand::sound_fade_time:
                   sound_fadeTime = pow((float)msg.value/midiMaxVal,10);
                   cout << "sound_fadeTime:" << sound_fadeTime << endl;
+                  break;
+              case MidiCommand::rms_correction_pct:
+                  rms_correction_pct = (float)msg.value/midiMaxVal;
+                  cout << "rms correction %:" << rms_correction_pct << endl;
                   break;
           }
       midiMaxVal = 127; // reset maxVal to control

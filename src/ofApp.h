@@ -82,6 +82,8 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 
         void drawVideoInLayout(int movieN);
     void drawBrightnessLayer(int x, int y, int w, int h);
+    void drawWhiteBg(int x, int y, int w, int h);
+
     ofTexture adjustBrightness(ofPixels pix,int w, int h);
 
 
@@ -131,6 +133,9 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		const float semitoneToRatio[12] = {
 			1,1.0625,1.125,1.2,1.25,1.3333,1.375,1.5,1.625,1.6666,1.75,1.875
 		};
+    
+    bool active_videos[MAX_VIDEOS];
+
 
 
 	private:
@@ -150,7 +155,6 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
         float sostenuto;
         float sostenutoFreeze;
 
-		bool active_videos[MAX_VIDEOS];
 
 		bool reset_videos[MAX_VIDEOS] = {false};
 
@@ -172,6 +176,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		float dyn[MAX_VIDEOS];
 		float videoVolume[MAX_VIDEOS];
 		float videoRms[MAX_VIDEOS];
+        float rms_correction_pct=1;
 
 		float startPos[MAX_VIDEOS];
 		float stutterStart[MAX_VIDEOS];
@@ -225,7 +230,8 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
       switch_to_set_5,
             ribattutoSpeed,
             panic,
-            sound_fade_time
+            sound_fade_time,
+            rms_correction_pct
 		};
 
 		std::map<string, MidiCommand> midiMappingsStringsToCommand = {
@@ -270,7 +276,8 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
      {"switch_to_set_5", MidiCommand::switch_to_set_5 },
      {"ribattutoSpeed", MidiCommand::ribattutoSpeed },
             {"panic", MidiCommand::panic },
-            {"sound_fade_time", MidiCommand::sound_fade_time }
+            {"sound_fade_time", MidiCommand::sound_fade_time },
+            {"rms_correction_pct", MidiCommand::rms_correction_pct }
 
 
 
@@ -320,6 +327,8 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
             {"panic", 53 },
             {"brightness_opacity" , 54},
             {"sound_fade_time" , 55},
+            {"rms_correction_pct" , 56},
+
 
 
 
@@ -359,7 +368,7 @@ public:
 
   void threadedFunction() {
     while(isThreadRunning()){
-			ctrl->soundFades(movieN);
+      ctrl->soundFades(movieN);
       std::this_thread::sleep_for(std::chrono::milliseconds(deltams));
     }
   }
