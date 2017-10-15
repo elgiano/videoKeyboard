@@ -82,6 +82,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 
         void drawVideoInLayout(int movieN);
     void drawBrightnessLayer(int x, int y, int w, int h);
+    ofTexture adjustBrightness(ofPixels pix,int w, int h);
 
 
 		void findConfig();
@@ -97,10 +98,12 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		void loadConfigNew(string path);
 		void loadMidiMappings();
 		void loadMultipleGroup(string path);
+        int setNumberFromKey(int key);
 		void loadSourceGroup(string path, int layout);
 		void loadCaptureGroup(int deviceID, int layout);
 		void loadRandomGroup(string path,int size);
 		std::map<string,float> readRms(string path);
+        void storeSetAvgRms(int set_n);
 		void setVideoVolume(int key,float vol);
 		void soundFades(int i);
 
@@ -338,6 +341,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		int activeSet = 0;
 		int loadedSets = 0;
 		int setStart[MAX_SETS] = {0};
+        float setAvgRms[MAX_SETS] = {1};
 
 		int** layoutConf;
 };

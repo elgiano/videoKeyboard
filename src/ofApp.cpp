@@ -271,6 +271,17 @@ std::map<string,float> ofApp::readRms(string path){
 
 }
 
+void ofApp::storeSetAvgRms(int set_n){
+    float avgRms = 0;
+    for(int i=setStart[set_n];i<n_videos;i++){
+        avgRms += videoRms[i];
+    }
+    avgRms = avgRms/(n_videos-setStart[set_n]);
+    setAvgRms[set_n] = avgRms;
+    cout << "set " << set_n << " avgRms " << avgRms << endl;
+}
+
+
 void ofApp::loadMultipleGroup(string path){
   cout << "multiple group: " << path << endl;
   ofDirectory subdir(path);
@@ -288,6 +299,7 @@ void ofApp::loadMultipleGroup(string path){
       if(thisPath.size()>0){
         loadConfigNew(thisPath.getPath(0));
       };
+      storeSetAvgRms(loadedSets-1);
 
     }
   }
@@ -480,13 +492,7 @@ void ofApp::drawVideoInLayout(int movieN){
         h = movie[movieN].getHeight();
     }
 
-    /*ofPixels pixels;
-    thisTexture.readToPixels(pixels);
-    for(auto & pixel:  pixels.getPixelsIter()){
-      cout << ofToString(pixel.getColor()) << endl;
-    }
-    thisTexture.loadData(pixels,GL_RBGA);*/
-
+    //thisTexture = adjustBrightness(movie[movieN].getPixels(),w,h);
 
   // actual drawing in layout
   switch(abs(layout)){
@@ -557,6 +563,23 @@ void ofApp::drawBrightnessLayer(int x, int y, int w, int h){
 
 }
 
+ofTexture ofApp::adjustBrightness(ofPixels pix,int w, int h){
+    ofColor color;
+    ofTexture newTexture;
+    /*cout << pix.size() << endl;
+    for(int r = 0; r<w; r++){
+        for(int c = 0; c<h; c++){
+            color = pix.getColor(r, c);
+            //color.setBrightness(ofClamp(color.getBrightness()+100,0,255));
+            //cout << color.getBrightness() << endl;
+            pix.setColor(r,c,color);
+        }
+    }*/
+    newTexture.loadData(pix);
+    return newTexture;
+    
+}
+
 //--------------------------------------------------------------
 void ofApp::draw(){
   int* thisLayoutPos;
@@ -620,6 +643,7 @@ void ofApp::update(){
                        (movie[i].getPosition() > (stutterStart[i]+(stutterDur[i]*stutterDurGlobal/movie[i].getDuration())))
                        or (movie[i].getPosition() < stutterStart[i])
                        ){
+                        cout << "stuttering " << i << endl;
                         movie[i].setPosition(stutterStart[i]);
                         movie[i].play();
                     }
@@ -699,7 +723,9 @@ void ofApp::soundFades(int i){
 
 void ofApp::setVideoVolume(int key, float vol){
   if(rms_mode){
-    movie[key].setVolume(vol*volume*videoVolume[key]/videoRms[key]);
+    movie[key].setVolume(vol*volume*videoVolume[key]*setAvgRms[setNumberFromKey(key)]/videoRms[key]);
+      cout << "#"<<key<< " volume " << vol*volume*videoVolume[key]*setAvgRms[setNumberFromKey(key)]/videoRms[key] <<  " correction " << videoRms[key] << endl;
+      cout << "set " << setNumberFromKey(key) << " avg: " << setAvgRms[setNumberFromKey(key)] << endl;
   }else{
     movie[key].setVolume(vol*volume*videoVolume[key]);
   }
@@ -707,6 +733,15 @@ void ofApp::setVideoVolume(int key, float vol){
      /*cout << "volume volume: " << volume <<endl;
      cout << "volume videoVol: " << videoVolume[key] <<endl;*/
 
+}
+
+int ofApp::setNumberFromKey(int key){
+    for(int i=0;i<loadedSets;i++){
+        if(setStart[i]>key){
+            return ofClamp(i-1,0,loadedSets);
+        }
+    }
+    return loadedSets>0?loadedSets-1:0;
 }
 // ### CONTROL ###
 
@@ -720,13 +755,7 @@ void ofApp::panic(){
 }
 
 void ofApp::playVideo(int key, float vel){
-  //key = key % n_videos;
-  //key = setStart[activeSet] + key;
-  /*if(activeSet < (loadedSets-1)){
-      key = setStart[activeSet] + (key%(setStart[activeSet+1]-setStart[activeSet]));
-  }else{
-      key = setStart[activeSet] + (key%(n_videos-setStart[activeSet]));
-  }*/
+
   cout << "playing video KEY:" << key << " of set:" << activeSet << " setstart:" << setStart[activeSet] << endl;
   //ofLog(OF_LOG_VERBOSE,"starting video " + ofToString(key));
   if(key>=0 && key < MAX_VIDEOS){
@@ -748,7 +777,6 @@ void ofApp::playVideo(int key, float vel){
       tapToSpeed(now-tapTempo[key],key);
       tapTempo[key] = now;
     }else{
-
       reset_videos[key] = true;
     }
 
@@ -792,14 +820,10 @@ void ofApp::stopVideo(int key){
 
               sustained_videos[key] = true;
           }
-          if(sostenuto>0){
-              sostenuto_videos[key] = true;
+          if(sostenuto_videos[key]>0 or sostenutoFreeze_videos[key]>0){
               active_videos[key] = false;
           }
-          if(sostenutoFreeze>0){
-              sostenutoFreeze_videos[key] = true;
-              active_videos[key] = false;
-          }
+
       }
     //}
   }
