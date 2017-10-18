@@ -8,6 +8,8 @@
 #include "ofxJsonSettings.h"
 #include "ofxHapPlayer.h"
 
+#include "config.h"
+
 #define MAX_VIDEOS 512
 #define MAX_SETS 8
 
@@ -20,6 +22,7 @@ class SoundFader;
 class ofApp : public ofBaseApp, public ofxMidiListener{
 
 	public:
+		Config settings;
 		ofxHapPlayer  movie[MAX_VIDEOS];
 		int layout_for_video[MAX_VIDEOS];
 		int n_layouts;
@@ -37,6 +40,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
         int brightness_opacity;
 
 		bool blending_multiply;
+		bool blending_add=false;
 		bool isDynamic = false;
 		bool isFading = true;
 		bool dynIsSpeed = false;
@@ -55,7 +59,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 
 		ofLoopType loopState = OF_LOOP_NORMAL;
 		ofColor videoColor;
-    
+
         int midiNoteToVideoKey(int note);
 
 
@@ -99,6 +103,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 
 		void loadConfigNew(string path);
 		void loadMidiMappings();
+		void loadSources();
 		void loadMultipleGroup(string path);
         int setNumberFromKey(int key);
 		void loadSourceGroup(string path, int layout);
@@ -133,7 +138,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		const float semitoneToRatio[12] = {
 			1,1.0625,1.125,1.2,1.25,1.3333,1.375,1.5,1.625,1.6666,1.75,1.875
 		};
-    
+
     bool active_videos[MAX_VIDEOS];
 
 
@@ -189,7 +194,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		float volume = 1.0;
 
 		string pitchBendFunc="global_speed";
-		enum class MidiCommand {
+		/*enum class MidiCommand {
 			fade_in,
 			fade_out,
 			global_speed,
@@ -231,7 +236,8 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
             ribattutoSpeed,
             panic,
             sound_fade_time,
-            rms_correction_pct
+            rms_correction_pct,
+						blending_add_switch
 		};
 
 		std::map<string, MidiCommand> midiMappingsStringsToCommand = {
@@ -277,7 +283,9 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
      {"ribattutoSpeed", MidiCommand::ribattutoSpeed },
             {"panic", MidiCommand::panic },
             {"sound_fade_time", MidiCommand::sound_fade_time },
-            {"rms_correction_pct", MidiCommand::rms_correction_pct }
+            {"rms_correction_pct", MidiCommand::rms_correction_pct },
+						{"blending_add_switch", MidiCommand::blending_add_switch},
+
 
 
 
@@ -328,6 +336,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
             {"brightness_opacity" , 54},
             {"sound_fade_time" , 55},
             {"rms_correction_pct" , 56},
+						{"blending_add_switch", 57}
 
 
 
@@ -335,7 +344,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		};
 
 
-		std::map<int,MidiCommand> midiMapByValue;
+		std::map<int,MidiCommand> midiMapByValue;*/
 
 		int midiMaxVal;
 		// LAYOUTS
@@ -350,7 +359,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		int activeSet = 0;
 		int loadedSets = 0;
 		int setStart[MAX_SETS] = {0};
-        float setAvgRms[MAX_SETS] = {1};
+    float setAvgRms[MAX_SETS] = {1};
 
 		int** layoutConf;
 };
@@ -372,7 +381,7 @@ public:
       std::this_thread::sleep_for(std::chrono::milliseconds(deltams));
     }
   }
-    
+
   void handleExit(ofEventArgs &e)
   {
         if(isThreadRunning())

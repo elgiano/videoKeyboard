@@ -32,8 +32,12 @@ void ofApp::setup(){
   }
 
   //scanDataDir();
-  findConfig();
-    
+  //findConfig();
+  settings.findConfig();
+  first_midinote = settings.first_midinote;
+  layoutConf = settings.layoutConf;
+  loadSources();
+
   sustain_mode = 0;
   midiMaxVal = 127;
   setupMidi();
@@ -76,7 +80,7 @@ bool ofApp::isCaptureKey (int key){
 }
 
 // ####### DATA DIR #########
-
+/*
 void ofApp::findConfig(){
   ofDirectory dir(ofToDataPath(""));
   // config file
@@ -95,7 +99,7 @@ void ofApp::loadConfigNew(string path){
   Settings::get().load(path);
   string enclosingDir = ofFilePath::getEnclosingDirectory(path);
   if( Settings::get().exists("general")){
-    
+
       if(Settings::get().exists("general/fade_in")){
         fade_in=Settings::getFloat("general/fade_in");
       }
@@ -235,6 +239,29 @@ void ofApp::loadDefaultConfig(){
   loadDefaultMidiMappings();
   cout << "default conf" << endl;
   loadConfigNew(ofToDataPath("../../defaultConf.json"));
+}*/
+void ofApp::loadConfigNew(string path){}
+void ofApp::loadSources(){
+  n_captures = 0;
+  cout << "loadSources() " << settings.n_sources << endl;
+  for(int i =0;i<settings.n_sources;i++){
+    SourceGroup src = settings.sourceGroups[i];
+    /*cout << src.type << endl;
+    cout << src.src << endl;
+    cout << src.layout << endl;
+    cout << src.deviceID << endl;
+    cout << src.size << endl;*/
+
+    switch(src.type){
+      case 0: loadSourceGroup(src.src,src.layout);break;
+      case 1: loadCaptureGroup(src.deviceID,src.layout);break;
+      case 2: loadRandomGroup(src.src,src.size);break;
+      case 3: loadMultipleGroup(src.src);break;
+    }
+  }
+  if(n_captures>0){
+    initCapture();
+  }
 }
 
 // ## load videos ##
@@ -337,6 +364,7 @@ void ofApp::loadSourceGroup(string path,int layout){
 
 void ofApp::loadCaptureGroup(int deviceID,int layout){
       if(n_videos<MAX_VIDEOS){
+        capture_sources[n_captures] = deviceID;
         capture_keys[n_captures] = n_videos;
         initVideoVariables(n_videos);
         layout_for_video[n_videos] = layout;
@@ -360,7 +388,7 @@ void ofApp::loadRandomGroup(string path,int size){
     string path = dir.getPath(round(ofRandom(0,n_sources-1)));
     movie[n_videos].load(path);
     initVideoVariables(i);
-    layout_for_video[n_videos] = round(ofRandom(0,n_layouts-1));
+    layout_for_video[n_videos] = round(ofRandom(0,/*n_layouts*/settings.n_layoutConfs-1));
     startPos[n_videos] = ofRandom(0.0,1.0);
     n_videos++;
     cout << "Preloading random #" << i  <<": " << startPos[i] <<"@"<< path << endl;
@@ -451,22 +479,27 @@ void ofApp::drawVideoInLayout(int movieN){
   // blending_multiply handling
   if(blending_multiply){
     // the background video is added, the rest are multiplied
-    if(thisLayoutInit[layoutPos]==0){
-      ofEnableBlendMode(OF_BLENDMODE_MULTIPLY);
+    //if(thisLayoutInit[layoutPos]==0){
+      //ofEnableBlendMode(OF_BLENDMODE_MULTIPLY);
       //cout << "FIRST LAYER" << ofToString(layoutPos) << endl;
       //thisLayoutInit[layoutPos]++ ;
-    }else{
+  //  }else{
 
         /* draw brightness layer
         ofEnableAlphaBlending();
         ofSetColor(brightness, brightness, brightness, brightness_opacity);
         ofDrawRectangle(0, 0, ofGetWidth(), ofGetHeight());*/
 
-        ofEnableBlendMode(OF_BLENDMODE_MULTIPLY);
       //cout << ofToString(thisLayoutInit[layoutPos])<< " pos"<< ofToString(layoutPos) << endl;
-    }
+    //}
+    ofEnableBlendMode(OF_BLENDMODE_MULTIPLY);
+
     videoColor.set(255,255,255,255*fi_alpha*fo_alpha*thisDyn);
     //ofSetColor(255,255,255,255*fi_alpha*fo_alpha*thisDyn);
+  }else if(blending_add){
+    ofEnableBlendMode(OF_BLENDMODE_ADD);
+
+    videoColor.set(255-brightness,255-brightness,255-brightness,255*fi_alpha*fo_alpha*thisDyn);
   }else{
     // alpha blending:
     ofEnableAlphaBlending();
@@ -497,7 +530,7 @@ void ofApp::drawVideoInLayout(int movieN){
   // actual drawing in layout
   switch(abs(layout)){
     case 0:
-          if(blending_multiply && thisLayoutInit[layoutPos]++==0){
+          if( (blending_multiply || blending_add )&& thisLayoutInit[layoutPos]++==0){
               drawWhiteBg(0,(screenH-(screenW*h/w))/2, screenW, screenW*h/w);
           }
       thisTexture.draw(0,(screenH-(screenW*h/w))/2, screenW, screenW*h/w);
@@ -603,7 +636,7 @@ ofTexture ofApp::adjustBrightness(ofPixels pix,int w, int h){
     }*/
     newTexture.loadData(pix);
     return newTexture;
-    
+
 }
 
 //--------------------------------------------------------------
@@ -789,11 +822,11 @@ void ofApp::playVideo(int key, float vel){
   //ofLog(OF_LOG_VERBOSE,"starting video " + ofToString(key));
   if(key>=0 && key < MAX_VIDEOS){
     // update dynamics and stop fade_out
-    dyn[key] = vel;
+      dyn[key] = vel;
       videoVolume[key] = dynIsVolume ? vel : 1.0;
-      //setVideoVolume(key,1.0);
-    fo_start[key] = 0;
-    fi_start[key] = ofGetElapsedTimef();
+      setVideoVolume(key,1.0);
+      fo_start[key] = 0;
+      fi_start[key] = ofGetElapsedTimef();
 
     if(!active_videos[key]){
       active_videos[key] = true;
@@ -831,7 +864,7 @@ void ofApp::deactivateVideo(int key){
 void ofApp::stopVideo(int key){
   //key = key % n_videos;
   //key = setStart[activeSet] + key;
-  
+
   ofLog(OF_LOG_VERBOSE, "stopping video " + ofToString(key));
 
   if(key>=0 && key < MAX_VIDEOS){
@@ -991,12 +1024,12 @@ void ofApp::setupMidi(){
   //ofSetVerticalSync(true);
   //ofSetLogLevel(OF_LOG_VERBOSE);
 
-  cout << "MIDI" << endl;
-  midiIn.openPort(midi_port);
+  cout << "setupMidi()" << endl;
+  midiIn.openPort(settings.midi_port);
   midiIn.addListener(this);
-    cout << midi_port2 << endl;
+    cout << settings.midi_port2 << endl;
   if(midi_port2>=0){
-      midiIn2.openPort(midi_port2);
+      midiIn2.openPort(settings.midi_port2);
       midiIn2.addListener(this);
   }
 }
@@ -1033,7 +1066,7 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
       midiMaxVal = 16383; // set maxVal to pitchBend
     case MIDI_CONTROL_CHANGE:
           //cout << ofToString(msg.control) << endl;
-          switch(midiMapByValue[msg.control]){
+          switch(settings.midiMapByValue[msg.control]){
             case MidiCommand::fade_in:
               fade_in = (float)msg.value/midiMaxVal*3;
               cout << "fade_in:" << fade_in << endl;
@@ -1106,7 +1139,14 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
                 break;
               case MidiCommand::blending_multiply_switch:
                            blending_multiply = msg.value!=0;
+                           if(blending_multiply){blending_add=false;}
+
                       cout << "multiply " << blending_multiply<< endl;
+              break;
+              case MidiCommand::blending_add_switch:
+                           blending_add = msg.value!=0;
+                           if(blending_add){blending_multiply=false;}
+                      cout << "add " << blending_add<< endl;
               break;
       			case MidiCommand::source_shuffle_switch:
               // TODO: not implemented
@@ -1259,7 +1299,7 @@ void ofApp::keyPressed(int key){
     sustain = sustain == 0 ? 1 : 0;
     if(sustain == 0){stopSustain();}
   }else{
-    playVideo(key-49,1.0);
+    playVideo(midiNoteToVideoKey(key-49),1.0);
   }
 
 }
@@ -1267,6 +1307,6 @@ void ofApp::keyPressed(int key){
 //--------------------------------------------------------------
 void ofApp::keyReleased(int key){
   key = tolower(key);
-  stopVideo(key-49);
+  stopVideo(midiNoteToVideoKey(key-49));
   //cout << ofToString(key) << " released" << endl;
 }
