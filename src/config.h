@@ -81,8 +81,6 @@ class Config {
 
       std::vector<SourceGroup> sourceGroups;
 
-      string pitchBendFunc="global_speed";
-
       std::map<string, MidiCommand> midiMappingsStringsToCommand = {
        {"fade_in", MidiCommand::fade_in},
        {"fade_out", MidiCommand::fade_out},

@@ -73,167 +73,9 @@ bool ofApp::isCaptureKey (int key){
     });
 }
 
-// ####### DATA DIR #########
-/*
-void ofApp::findConfig(){
-  ofDirectory dir(ofToDataPath(""));
-  // config file
-  dir.allowExt("json");
-  dir.listDir();
-  dir.sort();
 
-  loadDefaultConfig();
-  if(dir.size()>0){
-    cout << "custom conf" << endl;
-    loadConfigNew(dir.getPath(0));
-  }
-}
+// ## load videos ##
 
-void ofApp::loadConfigNew(string path){
-  Settings::get().load(path);
-  string enclosingDir = ofFilePath::getEnclosingDirectory(path);
-  if( Settings::get().exists("general")){
-
-      if(Settings::get().exists("general/fade_in")){
-        fade_in=Settings::getFloat("general/fade_in");
-      }
-      if(Settings::get().exists("general/fade_out")){
-        fade_out=Settings::getFloat("general/fade_out");
-      }
-      if(Settings::get().exists("general/blending_multiply")){
-         blending_multiply=Settings::getBool("general/blending_multiply");
-      }
-      if(Settings::get().exists("general/random")){
-         random=Settings::getBool("general/random");
-      }
-  }
-  if(Settings::get().exists("layouts")){
-    // count folders, init layoutConf
-    n_layouts = 0;
-    int thisFolder = 0;
-    while(Settings::get().exists("layouts/"+std::to_string(thisFolder++))){
-      n_layouts++;
-    }
-
-    layoutConf = new int*[n_layouts];
-    cout << ofToString(n_layouts) <<" layout groups" << endl;
-
-    // for each, split the data in N_LAYOUT numbers
-    for(thisFolder = 0; thisFolder < n_layouts; thisFolder++){
-      std::vector<string> positions = ofSplitString(Settings::getString("layouts/"+std::to_string(thisFolder)),",");
-      layoutConf[thisFolder] = new int[N_LAYOUTS];
-      for(unsigned j=0;j<positions.size() && j<N_LAYOUTS;j++){
-        layoutConf[thisFolder][j] = std::stoi(positions[j]);
-      }
-    }
-
-  }
-  if(Settings::get().exists("sources")){
-    int thisFolder = 0;
-    while(Settings::get().exists("sources/"+std::to_string(thisFolder))){
-      int thisLayout=0;
-      int thisDeviceID=0;
-      bool thisIsCapture = false;
-      bool thisIsRandom = false;
-      bool thisIsMultiple = false;
-      string thisSrc = "";
-      //type, source, layout
-      if(Settings::get().exists("sources/"+std::to_string(thisFolder)+"/type")){
-          if(Settings::getString("sources/"+std::to_string(thisFolder)+"/type")=="capture"){
-            thisIsCapture = true;
-          }else if(Settings::getString("sources/"+std::to_string(thisFolder)+"/type")=="random"){
-            thisIsRandom = true;
-          }else if(Settings::getString("sources/"+std::to_string(thisFolder)+"/type")=="multiple"){
-            thisIsMultiple = true;
-          }
-      }
-
-      if(Settings::get().exists("sources/"+std::to_string(thisFolder)+"/src")){
-        if(thisIsCapture){
-          thisDeviceID = Settings::getInt("sources/"+std::to_string(thisFolder)+"/src");
-        }else{
-          thisSrc = Settings::getString("sources/"+std::to_string(thisFolder)+"/src");
-        }
-      }
-
-      if(Settings::get().exists("sources/"+std::to_string(thisFolder)+"/layout")){
-        thisLayout = Settings::getInt("sources/"+std::to_string(thisFolder)+"/layout");
-      }
-
-      // load source group
-      cout << "source group #"<< ofToString(thisFolder)<< " capture:" << ofToString(thisIsCapture) << " random:"<<ofToString(thisIsRandom) <<" src:" << ofToString(thisSrc) << " layout:" << ofToString(thisLayout) << endl;
-      if(thisIsCapture){
-        capture_sources[n_captures] = thisDeviceID;
-        loadCaptureGroup(capture_sources[n_captures],thisLayout);
-      }else{
-        if(thisIsRandom){
-          int randSize = 1;
-          if(Settings::get().exists("sources/"+std::to_string(thisFolder)+"/size")){
-              randSize = Settings::getInt("sources/"+std::to_string(thisFolder)+"/size");
-          }
-          loadRandomGroup(ofFilePath::join(enclosingDir,thisSrc),randSize);
-        }else if(thisIsMultiple){
-          loadMultipleGroup(thisSrc);
-        }else{
-          loadSourceGroup(ofFilePath::join(enclosingDir,thisSrc),thisLayout);
-        }
-      }
-
-      thisFolder++;
-    }
-    if(n_captures>0){
-      initCapture();
-    }
-
-  }
-  if(Settings::get().exists("mappings")){
-    loadMidiMappings();
-  }
-
-}
-
-void ofApp::loadDefaultMidiMappings(){
-    if(ofFile::doesFileExist(ofToDataPath("../../midi_mappings.json"))){
-        Settings::get().load(ofToDataPath("../../midi_mappings.json"));
-        loadMidiMappings();
-    }
-}
-
-void ofApp::loadMidiMappings(){
-  // iterate midi keys
-  for(std::map<string,int>::iterator iter = midiMappings.begin(); iter != midiMappings.end(); ++iter)
-  {
-    string k =  iter->first;
-    int value = 0;
-    if(Settings::get().exists(k)){
-      value = Settings::getInt(k);
-      midiMappings[k] = value;
-      cout << k << ": " << value << endl;
-    }
-    if(Settings::get().exists("first_midinote")){
-      first_midinote = Settings::getInt("first_midinote");
-    }
-    if(Settings::get().exists("midi_port")){
-      midi_port = Settings::getInt("midi_port");
-    }
-    if(Settings::get().exists("midi_port2")){
-          midi_port2=Settings::getInt("midi_port2");
-    }
-  }
-
-  // flop list for faster search on midi message
-  for (map<string, int>::iterator i = midiMappings.begin(); i != midiMappings.end(); ++i){
-    midiMapByValue[i->second] = midiMappingsStringsToCommand[i->first];
-  }
-
-}
-
-void ofApp::loadDefaultConfig(){
-  cout << "default midi mappings" << endl;
-  loadDefaultMidiMappings();
-  cout << "default conf" << endl;
-  loadConfigNew(ofToDataPath("../../defaultConf.json"));
-}*/
 void ofApp::loadSources(){
   n_captures = 0;
   cout << "loadSources() " << settings.n_sources << endl;
@@ -256,8 +98,6 @@ void ofApp::loadSources(){
     initCapture();
   }
 }
-
-// ## load videos ##
 
 void ofApp::initVideoVariables(int key){
   active_videos[key] = false;
@@ -453,43 +293,24 @@ void ofApp::drawVideoInLayout(int movieN){
     layoutPos = abs(layoutConf[thisLayout][abs(layout)-1]-1);
   }
 
-  //cout <<  ofToString(thisLayoutInit[0]) <<  ofToString(thisLayoutInit[1])<<  ofToString(thisLayoutInit[2])<< endl;
-  // blending_multiply handling
   if(blending_multiply){
-    // the background video is added, the rest are multiplied
-    //if(thisLayoutInit[layoutPos]==0){
-      //ofEnableBlendMode(OF_BLENDMODE_MULTIPLY);
-      //cout << "FIRST LAYER" << ofToString(layoutPos) << endl;
-      //thisLayoutInit[layoutPos]++ ;
-  //  }else{
 
-        /* draw brightness layer
-        ofEnableAlphaBlending();
-        ofSetColor(brightness, brightness, brightness, brightness_opacity);
-        ofDrawRectangle(0, 0, ofGetWidth(), ofGetHeight());*/
-
-      //cout << ofToString(thisLayoutInit[layoutPos])<< " pos"<< ofToString(layoutPos) << endl;
-    //}
     ofEnableBlendMode(OF_BLENDMODE_MULTIPLY);
-
     videoColor.set(255,255,255,255*fi_alpha*fo_alpha*thisDyn);
-    //ofSetColor(255,255,255,255*fi_alpha*fo_alpha*thisDyn);
-  }else if(blending_add){
-    ofEnableBlendMode(OF_BLENDMODE_ADD);
 
+  }else if(blending_add){
+
+    ofEnableBlendMode(OF_BLENDMODE_ADD);
     videoColor.set(255-brightness,255-brightness,255-brightness,255*fi_alpha*fo_alpha*thisDyn);
+
   }else{
     // alpha blending:
     ofEnableAlphaBlending();
     // logarithmic layering * fade_in_transparency * fade_out_transparency * dynamic level
     videoColor.set(255,255,255,255/log2(layoutCount[abs(layout)][layoutPos]+2)*fi_alpha*fo_alpha*thisDyn);
-    //ofSetColor(255,255,255,255/log2(layoutCount[abs(layout)][layoutPos]+2)*fi_alpha*fo_alpha*thisDyn);
   }
   //videoColor.setSaturation(saturation);
   ofSetColor(videoColor);
-
-  //ofLogVerbose() << "layout count " << ofToString(layoutCount[abs(layout)][layoutPos]) ;
-  //ofLogVerbose() << "fi/fo " << ofToString(fi_alpha) << "/" <<  ofToString(fo_alpha);
 
 
     ofTexture thisTexture;
@@ -583,8 +404,6 @@ void ofApp::drawVideoInLayout(int movieN){
   }
 
 
-
-
 }
 
 void ofApp::drawBrightnessLayer(int x, int y, int w, int h){
@@ -597,7 +416,6 @@ void ofApp::drawWhiteBg(int x, int y, int w, int h){
     ofSetColor(255, 255, 255);
     ofDrawRectangle(x, y+1, w, h-1);
     ofEnableBlendMode(OF_BLENDMODE_MULTIPLY);
-
 }
 
 ofTexture ofApp::adjustBrightness(ofPixels pix,int w, int h){
@@ -640,13 +458,11 @@ void ofApp::draw(){
   // draw videos
   for(int i=0;i<MAX_VIDEOS;i++){
     if(active_videos[i] or sostenuto_videos[i] or sostenutoFreeze_videos[i]){
-      //if(movie[i].isFrameNew()){
-      //ofLogVerbose() << "drawing " + ofToString(i);
+
       /*movie[i].setLoopState(loopState);
       cout << movie[i].getLoopState() << endl;*/
       drawVideoInLayout(i);
-      //ofLogVerbose() << "drawn " + ofToString(i);
-      //}
+
     }
   }
 }
@@ -672,9 +488,7 @@ void ofApp::update(){
               }else{
                 movie[i].setSpeed(speed*(ribattutoSpeed?tapSpeed[i]:1));
               }
-              /*if(sostenutoFreeze_videos[i]){
-                  movie[i].setPaused(true);
-              }*/
+
                 if(sostenutoFreeze_videos[i]){
                     if(
                        (movie[i].getPosition() > (stutterStart[i]+(stutterDur[i]*stutterDurGlobal/movie[i].getDuration())))
@@ -697,10 +511,6 @@ void ofApp::update(){
                   movie[i].play();
                   continue;
                }
-
-              //cout << dyn[i] << endl;
-
-                //soundFades(i);
 
                     if(harmonic_loops){
                       if(movie[i].getPosition()*movie[i].getDuration()>=harmonicLoopDur(i)){
@@ -930,11 +740,11 @@ float ofApp::tapToSpeed(float t,int k){
 
 void ofApp::stopSustain(){
   for(int i=0;i<MAX_VIDEOS;i++){tapSpeed[i]=1.0;};
-  cout << "stop sustain" << endl;
+  //cout << "stop sustain" << endl;
 
   for(int i=0;i<MAX_VIDEOS;i++){
     if(sustained_videos[i]){
-      cout << "stop sustain " << i << endl;
+      //cout << "stop sustain " << i << endl;
       stopVideo(i);
       sustained_videos[i] = false;
     }
