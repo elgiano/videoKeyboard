@@ -1,11 +1,5 @@
 #include "ofApp.h"
 
-// todo:
-// * start/stop audio; OK (latency?)
-// * stutter aftertouch
-// * source shuffle mode
-
-
 //--------------------------------------------------------------
 void ofApp::setup(){
 
@@ -240,7 +234,6 @@ void ofApp::loadDefaultConfig(){
   cout << "default conf" << endl;
   loadConfigNew(ofToDataPath("../../defaultConf.json"));
 }*/
-void ofApp::loadConfigNew(string path){}
 void ofApp::loadSources(){
   n_captures = 0;
   cout << "loadSources() " << settings.n_sources << endl;
@@ -324,7 +317,9 @@ void ofApp::loadMultipleGroup(string path){
       thisPath.sort();
       setStart[loadedSets++] = n_videos;
       if(thisPath.size()>0){
-        loadConfigNew(thisPath.getPath(0));
+        //loadConfigNew(thisPath.getPath(0));
+        settings.loadConfig(thisPath.getPath(0));
+        loadSources();
       };
       storeSetAvgRms(loadedSets-1);
 
@@ -354,9 +349,10 @@ void ofApp::loadSourceGroup(string path,int layout){
           videoRms[n_videos] = volumes[subdir.getPath(k)];
         }
         layout_for_video[n_videos] = layout;
+        cout << "Preloading " << n_videos  <<" "<< subdir.getPath(k)<< endl;
+
         n_videos++;
 
-        cout << "Preloading " << n_videos  <<" "<< subdir.getPath(k)<< endl;
 
       }
     }
@@ -387,37 +383,14 @@ void ofApp::loadRandomGroup(string path,int size){
   for(int i=0;i<size && n_videos < MAX_VIDEOS;i++){
     string path = dir.getPath(round(ofRandom(0,n_sources-1)));
     movie[n_videos].load(path);
-    initVideoVariables(i);
+    initVideoVariables(n_videos);
     layout_for_video[n_videos] = round(ofRandom(0,/*n_layouts*/settings.n_layoutConfs-1));
     startPos[n_videos] = ofRandom(0.0,1.0);
+    cout << "Preloading random #" << n_videos  <<": " << startPos[n_videos] <<"@"<< path << endl;
     n_videos++;
-    cout << "Preloading random #" << i  <<": " << startPos[i] <<"@"<< path << endl;
   }
 
 }
-
-/*
-void ofApp::loadRandom(){
-  ofDirectory dir(ofToDataPath(""));
-  dir.allowExt("mov");
-  dir.listDir();
-  dir.sort();
-  n_videos = MAX_VIDEOS;
-  int n_sources = dir.size();
-  n_activeVideos = 0;
-
-  for(int i=0;i<MAX_VIDEOS;i++){
-    string path = dir.getPath(round(ofRandom(0,n_sources-1)));
-    movie[i].load(path);
-    initVideoVariables(i);
-    layout_for_video[i] = round(ofRandom(0,n_layouts-1));
-    startPos[i] = ofRandom(0.0,1.0);
-
-    cout << "Preloading random #" << i  <<": " << startPos[i] <<"@"<< path << endl;
-  }
-
-}
-*/
 
 // ### DRAW ###
 
@@ -426,6 +399,7 @@ void ofApp::drawVideoInLayout(int movieN){
   float h = movie[movieN].getHeight();
 
   float thisDyn = 1.0;
+  float now = ofGetElapsedTimef();
   if(isDynamic){
     thisDyn = dyn[movieN];
   }
@@ -433,7 +407,11 @@ void ofApp::drawVideoInLayout(int movieN){
   float fi_alpha = 1;
     // fade in
     if(fade_in>0 && isFading){
-        fi_alpha = (movie[movieN].getPosition()-startPos[movieN])*movie[movieN].getDuration();
+        if(now-fi_start[movieN]<fade_in){
+          fi_alpha = now-fi_start[movieN];
+        }else{
+          fi_alpha = (movie[movieN].getPosition()-startPos[movieN])*movie[movieN].getDuration();
+        }
         fi_alpha = fi_alpha/fade_in;fi_alpha = fi_alpha <= 0 ? 0 : fi_alpha >= 1 ? 1 : fi_alpha;
     }
 
@@ -447,12 +425,12 @@ void ofApp::drawVideoInLayout(int movieN){
     if(fo_start[movieN] > 0){
       if(fade_out==0 || !isFading){
           fo_alpha = 0;
-          if((ofGetElapsedTimef()-fo_start[movieN])>sound_fadeTime){
+          if((now-fo_start[movieN])>sound_fadeTime){
               deactivateVideo(movieN);fo_start[movieN] = 0.0;return;
           }
       }else{
         // otherwise update the fade out
-        fo_alpha = ofGetElapsedTimef()-fo_start[movieN];
+        fo_alpha = now-fo_start[movieN];
 
         // kill video if fade ended
         if(fo_alpha>fade_out){deactivateVideo(movieN);fo_start[movieN] = 0.0;return;}
@@ -467,7 +445,7 @@ void ofApp::drawVideoInLayout(int movieN){
   int layoutPos=0;
   int thisLayout = layout_for_video[movieN];
     if(layoutShuffle){
-        thisLayout = movieN % n_layouts;
+        thisLayout = movieN % settings.n_layoutConfs;
     }
   if(layout>0 || layout < (-2)){
     layoutPos = layoutConf[thisLayout][abs(layout)-1];
@@ -649,7 +627,7 @@ void ofApp::draw(){
   for(int i=0;i<MAX_VIDEOS;i++){if(active_videos[i] or sostenuto_videos[i] or sostenutoFreeze_videos[i]){
       int thisLayout = layout_for_video[i];
       if(layoutShuffle){
-          thisLayout = i % n_layouts;
+          thisLayout = i % settings.n_layoutConfs;
       }
     thisLayoutPos = layoutConf[thisLayout];
     layoutCount[0][0]++;
@@ -722,7 +700,7 @@ void ofApp::update(){
 
               //cout << dyn[i] << endl;
 
-                soundFades(i);
+                //soundFades(i);
 
                     if(harmonic_loops){
                       if(movie[i].getPosition()*movie[i].getDuration()>=harmonicLoopDur(i)){
@@ -753,6 +731,10 @@ void ofApp::soundFades(int i){
       vol = pow(vol,10);
       //cout << "pow: " << vol << endl;
       //vol = vol/sound_fadeTime;
+  }else if(movie[i].getPosition()*movie[i].getDuration()<sound_fadeTime){
+    vol = movie[i].getPosition()*movie[i].getDuration()/sound_fadeTime;
+    //cout << "pct: " << vol << endl;
+    vol = pow(vol,10);
   }
   // sound fade_out
   if(fo_start[i]>0){
@@ -791,9 +773,6 @@ void ofApp::setVideoVolume(int key, float vol){
   }else{
     movie[key].setVolume(vol*volume*videoVolume[key]);
   }
-    //cout << "volume vol: " << vol <<endl;
-     /*cout << "volume volume: " << volume <<endl;
-     cout << "volume videoVol: " << videoVolume[key] <<endl;*/
 
 }
 
@@ -1018,280 +997,8 @@ float ofApp::harmonicLoopDur(int key){
   return harmonicLoopBaseDur / (ratio * octave);
 }
 
-// ### INPUT ####
+// ### INPUT: midi input and setup is in midiInterface.cpp ####
 
-void ofApp::setupMidi(){
-  //ofSetVerticalSync(true);
-  //ofSetLogLevel(OF_LOG_VERBOSE);
-
-  cout << "setupMidi()" << endl;
-  midiIn.openPort(settings.midi_port);
-  midiIn.addListener(this);
-    cout << settings.midi_port2 << endl;
-  if(midi_port2>=0){
-      midiIn2.openPort(settings.midi_port2);
-      midiIn2.addListener(this);
-  }
-}
-
-int ofApp::midiNoteToVideoKey(int note){
-    int key;
-    if(activeSet < (loadedSets-1)){
-        key = setStart[activeSet] + (note%(setStart[activeSet+1]-setStart[activeSet]));
-    }else{
-        key = setStart[activeSet] + (note%(n_videos-setStart[activeSet]));
-    }
-    return key;
-}
-
-//--------------------------------------------------------------
-void ofApp::newMidiMessage(ofxMidiMessage& msg) {
-
-  cout << ofToString(msg.deltatime) << " ) " << msg.getStatusString(msg.status) << " " <<ofToString(((int)msg.pitch)) << " " << ofToString(msg.velocity) << " " << ofToString(msg.control) << " " << ofToString(msg.value)<< endl;
-
-  switch(msg.status) {
-    case MIDI_NOTE_ON :
-      if(msg.velocity>0){
-        playVideo(midiNoteToVideoKey(msg.pitch-first_midinote),(float) msg.velocity/127);
-        break;
-      }
-    case MIDI_NOTE_OFF:
-      stopVideo(midiNoteToVideoKey(msg.pitch-first_midinote));
-      break;
-    case MIDI_POLY_AFTERTOUCH:
-      //cout << msg.value << endl;
-      break;
-    case MIDI_PITCH_BEND:
-      msg.control = -1;
-      midiMaxVal = 16383; // set maxVal to pitchBend
-    case MIDI_CONTROL_CHANGE:
-          //cout << ofToString(msg.control) << endl;
-          switch(settings.midiMapByValue[msg.control]){
-            case MidiCommand::fade_in:
-              fade_in = (float)msg.value/midiMaxVal*3;
-              cout << "fade_in:" << fade_in << endl;
-              break;
-      			case MidiCommand::fade_out:
-              fade_out = (float)msg.value/midiMaxVal*3;
-              cout << "fade_out:" << fade_out << endl;
-
-              break;
-      			case MidiCommand::global_speed:
-              changeAllSpeed((float) msg.value/midiMaxVal);
-              cout << "speed" << endl;
-              break;
-            case MidiCommand::speed_reverse:
-              speed_reverse = msg.value > (midiMaxVal/2);
-              changeAllSpeed(-1); // only update direction;
-              cout << "speed reverse:" << speed_reverse << endl;
-              break;
-      			case MidiCommand::layout_change:
-              layout = round(msg.value/(midiMaxVal/N_LAYOUTS/2))-N_LAYOUTS;
-              cout << "layout " << ofToString(layout)<< endl;
-              break;
-      			case MidiCommand::brightness:
-              brightness = (int)round((float)msg.value/midiMaxVal*255);
-              cout << "brightness " << ofToString(brightness)<< endl;
-              break;
-              case MidiCommand::brightness_opacity:
-                  brightness_opacity = (int)round((float)msg.value/midiMaxVal*255);
-                  cout << "brightness transp: " << ofToString(brightness_opacity)<< endl;
-                  break;
-      			case MidiCommand::sustain:
-              cout << "sustain" << endl;
-              switch (sustain_mode) {
-                case 0:
-                  sustain = (msg.value)/midiMaxVal;
-                  if(sustain==0){stopSustain();};
-                  break;
-                case 1:
-                  cout << "sostenuto" << endl;
-                  sostenuto = (msg.value)/midiMaxVal;
-                  if(sostenuto==0){stopSostenuto();}
-                  if(sostenuto==1){startSostenuto();}
-                  break;
-                case 2:
-                  cout << "sostenutoFreeze" << endl;
-                  sostenutoFreeze = (msg.value)/midiMaxVal;
-                  if(sostenutoFreeze==0){stopSostenutoFreeze();}
-                  if(sostenutoFreeze==1){startSostenutoFreeze();}
-                  break;
-              }
-              break;
-      			case MidiCommand::sostenuto:
-              cout << "sostenuto" << endl;
-              sostenuto = (msg.value)/midiMaxVal;
-              if(sostenuto==0){stopSostenuto();}
-              if(sostenuto==1){startSostenuto();}
-              break;
-      			case MidiCommand::sostenuto_freeze:
-              sostenutoFreeze = (  msg.value)/midiMaxVal;
-              if(sostenutoFreeze==0){stopSostenutoFreeze();}
-              if(sostenutoFreeze==1){startSostenutoFreeze();}
-              break;
-      			case MidiCommand::dynamics_switch:
-                  isDynamic = msg.value!=0;
-              ofLogVerbose("dynamics_switch: " + ofToString(isDynamic));
-              break;
-      			case MidiCommand::fade_switch:
-                  isFading = msg.value!=0 ;
-                  ofLogVerbose("fading_switch: " + ofToString(isFading));
-                break;
-              case MidiCommand::blending_multiply_switch:
-                           blending_multiply = msg.value!=0;
-                           if(blending_multiply){blending_add=false;}
-
-                      cout << "multiply " << blending_multiply<< endl;
-              break;
-              case MidiCommand::blending_add_switch:
-                           blending_add = msg.value!=0;
-                           if(blending_add){blending_multiply=false;}
-                      cout << "add " << blending_add<< endl;
-              break;
-      			case MidiCommand::source_shuffle_switch:
-              // TODO: not implemented
-              break;
-      	  	case MidiCommand::sustain_mode:
-              sustain_mode = (int)round((float)msg.value/(midiMaxVal/2));
-              break;
-      	  	case MidiCommand::loop_mode:
-              switch((int)round((float)msg.value/(midiMaxVal/2))){
-                case 0:
-                  cout << "loop none"<< endl;
-                  loopState = OF_LOOP_NONE;
-                  break;
-                case 1:
-                  cout << "loop normal" << endl;
-                  loopState = OF_LOOP_NORMAL;
-                  break;
-                case 2:
-                  cout << "loop rev" << endl;
-                  loopState = OF_LOOP_PALINDROME;
-                  break;
-              }
-              break;
-              case MidiCommand::speed_dynamics:
-                  cout << "dynIsSpeed" << endl;
-                      dynIsSpeed = msg.value!=0;
-                      cout << "dynIsSpeed " << dynIsSpeed << endl;
-                      break;
-              case MidiCommand::layout_shuffle:
-                      layoutShuffle = msg.value!=0;
-                      cout << "layout shuffle " <<layoutShuffle << endl;
-                    break;
-              case MidiCommand::dynamics_decay:
-                    dynIsDecaying = msg.value!=0;
-                    cout << "dynDecay " << dynIsDecaying << endl;
-
-                  break;
-              case MidiCommand::global_volume:
-                  changeAllVolume((float)msg.value/midiMaxVal);
-                  cout << "global_volume "<< volume << endl;
-                  break;
-              case MidiCommand::dynamics_volume:
-                      dynIsVolume = msg.value!=0;
-                      cout << "dynIsVolume "<< dynIsVolume << endl;
-                    break;
-              case MidiCommand::rms_normalize:
-                    rms_mode = msg.value!=0;
-                    cout << "rms_mode "<< rms_mode << endl;
-                  break;
-              case MidiCommand::stutter_mode:
-                  //stutterMode = !stutterMode;
-                  stutterDurGlobal = ofMap((float)msg.value/midiMaxVal,0,1,0.04,7);
-                  //stutterMode = (stutterDurGlobal>0);
-                  cout << "stutter_mode:" << stutterMode << endl;
-                  cout << "sdg:" << stutterDurGlobal << endl;
-
-                  break;
-              case MidiCommand::stutter_dur_global:
-                  stutterDurGlobal = (float)msg.value/midiMaxVal*0.5;
-                  cout << "stutter_mode:" << stutterMode << endl;
-                  break;
-              case MidiCommand::harmonic_loops:
-                  harmonic_loops = msg.value!=0;
-                  cout << "harmonic_loops:" << harmonic_loops << endl;
-                  break;
-              case MidiCommand::harmonic_loop_base_dur:
-                  harmonicLoopBaseDur = (float)msg.value/midiMaxVal*10;
-                  cout << "harmonic_loops_baseDur:" << harmonicLoopBaseDur << endl;
-                  break;
-              case MidiCommand::switch_to_layout_0:
-                  layout = 0;
-                  cout << "layout " << ofToString(layout)<< endl;
-                  break;
-              case MidiCommand::switch_to_layout_1:
-                  layout = 1;
-                  cout << "layout " << ofToString(layout)<< endl;
-                  break;
-              case MidiCommand::switch_to_layout_2:
-                  layout = 2;
-                  cout << "layout " << ofToString(layout)<< endl;
-                  break;
-              case MidiCommand::switch_to_layout_3:
-                  layout = 3;
-                  cout << "layout " << ofToString(layout)<< endl;
-                  break;
-              case MidiCommand::switch_to_layout_4:
-                  layout = 4;
-                  cout << "layout " << ofToString(layout)<< endl;
-                  break;
-              case MidiCommand::switch_to_layout_5:
-                  layout = 5;
-                  cout << "layout " << ofToString(layout)<< endl;
-                  break;
-              case MidiCommand::switch_to_set_0:
-                  activeSet = 0;
-                  cout << "activeSet " << ofToString(activeSet)<< endl;
-                  break;
-              case MidiCommand::switch_to_set_1:
-                  activeSet = 1%loadedSets;
-                  cout << "activeSet " << ofToString(activeSet)<< endl;
-                  break;
-              case MidiCommand::switch_to_set_2:
-                  activeSet = 2%loadedSets;
-                  cout << "activeSet " << ofToString(activeSet)<< endl;
-                  break;
-              case MidiCommand::switch_to_set_3:
-                  activeSet = 3%loadedSets;
-                  cout << "activeSet " << ofToString(activeSet)<< endl;
-                  break;
-              case MidiCommand::switch_to_set_4:
-                  activeSet = 4%loadedSets;
-                  cout << "activeSet " << ofToString(activeSet)<< endl;
-                  break;
-              case MidiCommand::switch_to_set_5:
-                  activeSet = 5%loadedSets;
-                  cout << "activeSet " << ofToString(activeSet)<< endl;
-                  break;
-              case MidiCommand::ribattutoSpeed:
-                  ribattutoSpeed = msg.value!=0;
-                  cout << "ribattutoSpeed " << ofToString(ribattutoSpeed)<< endl;
-                  break;
-              case MidiCommand::panic:
-                  panic();
-                  cout << "panic " << endl;
-                  break;
-              case MidiCommand::sound_fade_time:
-                  sound_fadeTime = pow((float)msg.value/midiMaxVal,10);
-                  cout << "sound_fadeTime:" << sound_fadeTime << endl;
-                  break;
-              case MidiCommand::rms_correction_pct:
-                  rms_correction_pct = (float)msg.value/midiMaxVal;
-                  cout << "rms correction %:" << rms_correction_pct << endl;
-                  break;
-          }
-      midiMaxVal = 127; // reset maxVal to control
-      break;
-    default:
-      cout << ofToString(msg.deltatime) << " ) " << msg.getStatusString(msg.status) << " " <<ofToString(((int)msg.pitch)-21) << " " << ofToString(msg.control) << " " << ofToString(msg.value) << endl;
-      break;
-    };
-
-
-}
-
-//--------------------------------------------------------------
 void ofApp::keyPressed(int key){
 
   key = tolower(key);
