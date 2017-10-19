@@ -20,17 +20,12 @@ void ofApp::setup(){
   n_captures = 0;
   n_videos = 0;
 
-
   for(int i=0;i<MAX_CAPTURE;i++){
     capture_keys[i] = -1;
   }
 
-  //scanDataDir();
-  //findConfig();
-  settings.findConfig();
+  loadSources(settings.findConfig());
   first_midinote = settings.first_midinote;
-  layoutConf = settings.layoutConf;
-  loadSources();
 
   sustain_mode = 0;
   midiMaxVal = 127;
@@ -45,6 +40,7 @@ void ofApp::setup(){
 // ####### CAPTURE  #########
 
 void ofApp::initCapture(){
+    cout << "initCapture()" << endl;
     for(int i=0;i<n_captures; i++){
         capture[i].setDeviceID(capture_sources[i]);
         capture[i].setDesiredFrameRate(60);
@@ -76,11 +72,10 @@ bool ofApp::isCaptureKey (int key){
 
 // ## load videos ##
 
-void ofApp::loadSources(){
-  n_captures = 0;
-  cout << "loadSources() " << settings.n_sources << endl;
-  for(int i =0;i<settings.n_sources;i++){
-    SourceGroup src = settings.sourceGroups[i];
+void ofApp::loadSources(std::vector<SourceGroup> sourceGroups){
+  int old_captures = n_captures;
+  cout << "loadSources() " << sourceGroups.size() << endl;
+  for(auto src : sourceGroups){
     /*cout << src.type << endl;
     cout << src.src << endl;
     cout << src.layout << endl;
@@ -94,7 +89,7 @@ void ofApp::loadSources(){
       case 3: loadMultipleGroup(src.src);break;
     }
   }
-  if(n_captures>0){
+  if(old_captures<n_captures){
     initCapture();
   }
 }
@@ -158,8 +153,8 @@ void ofApp::loadMultipleGroup(string path){
       setStart[loadedSets++] = n_videos;
       if(thisPath.size()>0){
         //loadConfigNew(thisPath.getPath(0));
-        settings.loadConfig(thisPath.getPath(0));
-        loadSources();
+        cout << "load subset conf" << endl;
+        loadSources(settings.loadConfig(thisPath.getPath(0)));
       };
       storeSetAvgRms(loadedSets-1);
 
@@ -288,9 +283,9 @@ void ofApp::drawVideoInLayout(int movieN){
         thisLayout = movieN % settings.n_layoutConfs;
     }
   if(layout>0 || layout < (-2)){
-    layoutPos = layoutConf[thisLayout][abs(layout)-1];
+    layoutPos = settings.layoutConf[thisLayout][abs(layout)-1];
   }else if(layout<0){
-    layoutPos = abs(layoutConf[thisLayout][abs(layout)-1]-1);
+    layoutPos = abs(settings.layoutConf[thisLayout][abs(layout)-1]-1);
   }
 
   if(blending_multiply){
@@ -437,34 +432,31 @@ ofTexture ofApp::adjustBrightness(ofPixels pix,int w, int h){
 
 //--------------------------------------------------------------
 void ofApp::draw(){
-  int* thisLayoutPos;
 
-  for(int i=0; i<MAX_LAYOUTPOS; i++){thisLayoutInit[i]=0;}
-  memset(layoutCount, 0, sizeof(layoutCount));
-  // count videos in each layoutPos
-  for(int i=0;i<MAX_VIDEOS;i++){if(active_videos[i] or sostenuto_videos[i] or sostenutoFreeze_videos[i]){
-      int thisLayout = layout_for_video[i];
-      if(layoutShuffle){
-          thisLayout = i % settings.n_layoutConfs;
-      }
-    thisLayoutPos = layoutConf[thisLayout];
-    layoutCount[0][0]++;
-    for(int j=0;j<N_LAYOUTS;j++){
-      layoutCount[j+1][thisLayoutPos[j]]++;
-    }
-  }};
-
+  updateLayoutCount();
 
   // draw videos
   for(int i=0;i<MAX_VIDEOS;i++){
     if(active_videos[i] or sostenuto_videos[i] or sostenutoFreeze_videos[i]){
-
       /*movie[i].setLoopState(loopState);
       cout << movie[i].getLoopState() << endl;*/
       drawVideoInLayout(i);
 
     }
   }
+}
+
+void ofApp::updateLayoutCount(){
+  // count videos in each layoutPos
+  memset(thisLayoutInit,0,sizeof(thisLayoutInit));
+  memset(layoutCount, 0, sizeof(layoutCount));
+  for(int i=0;i<MAX_VIDEOS;i++){if(active_videos[i] or sostenuto_videos[i] or sostenutoFreeze_videos[i]){
+    int thisLayout = layoutShuffle?(i % settings.n_layoutConfs):layout_for_video[i];
+    layoutCount[0][0]++;
+    for(int j=0;j<(N_LAYOUTS-1);j++){
+      layoutCount[j+1][settings.layoutConf[thisLayout][j]]++;
+    }
+  }};
 }
 
 //--------------------------------------------------------------

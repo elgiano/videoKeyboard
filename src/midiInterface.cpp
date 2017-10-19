@@ -8,7 +8,7 @@ void ofApp::setupMidi(){
   midiIn.openPort(settings.midi_port);
   midiIn.addListener(this);
     cout << settings.midi_port2 << endl;
-  if(midi_port2>=0){
+  if(settings.midi_port2>=0){
       midiIn2.openPort(settings.midi_port2);
       midiIn2.addListener(this);
   }

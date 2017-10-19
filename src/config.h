@@ -69,17 +69,17 @@ class Config {
       float fade_in;
       float fade_out;
 
-      int n_layoutConfs; // number of defined layout configurations, for setting a random one
+      int n_layoutConfs=0; // number of defined layout configurations, for setting a random one
 
       int n_sources;
 
-      void findConfig();
+      std::vector<SourceGroup> findConfig();
       void loadDefaultConfig();
-      void loadConfig(string path);
+      std::vector<SourceGroup> loadConfig(string path);
       void loadDefaultMidiMappings();
       void loadMidiMappings();
 
-      std::vector<SourceGroup> sourceGroups;
+      //std::vector<SourceGroup> sourceGroups;
 
       std::map<string, MidiCommand> midiMappingsStringsToCommand = {
        {"fade_in", MidiCommand::fade_in},
@@ -177,6 +177,6 @@ class Config {
 
   		std::map<int,MidiCommand> midiMapByValue;
 
-      int** layoutConf;
+      std::vector<std::array<int,(N_LAYOUTS-1)>> layoutConf;
 
 };

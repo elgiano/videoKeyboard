@@ -81,8 +81,10 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		void setup();
 		void update();
 		void draw();
+		void updateLayoutCount();
 
-        void drawVideoInLayout(int movieN);
+
+    void drawVideoInLayout(int movieN);
     void drawBrightnessLayer(int x, int y, int w, int h);
     void drawWhiteBg(int x, int y, int w, int h);
 
@@ -101,7 +103,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 
 		void loadConfigNew(string path);
 		void loadMidiMappings();
-		void loadSources();
+		void loadSources(std::vector<SourceGroup>);
 		void loadMultipleGroup(string path);
         int setNumberFromKey(int key);
 		void loadSourceGroup(string path, int layout);
@@ -207,7 +209,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 
 		int layoutCount[N_LAYOUTS+1][MAX_LAYOUTPOS]={0};
 
-		int** layoutConf;
+		//std::vector<int[N_LAYOUTS]> layoutConf;
 };
 
 class SoundFader : public ofThread {

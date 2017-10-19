@@ -1,6 +1,7 @@
 #include "config.h"
 
-void Config::findConfig(){
+std::vector<SourceGroup> Config::findConfig(){
+  std::vector<SourceGroup> sourceGroups;
   ofDirectory dir(ofToDataPath(""));
   // config file
   dir.allowExt("json");
@@ -10,8 +11,9 @@ void Config::findConfig(){
   loadDefaultConfig();
   if(dir.size()>0){
     cout << "custom conf" << endl;
-    loadConfig(dir.getPath(0));
+    sourceGroups = loadConfig(dir.getPath(0));
   }
+  return sourceGroups;
 }
 
   void Config::loadDefaultConfig(){
@@ -21,33 +23,44 @@ void Config::findConfig(){
     loadConfig(ofToDataPath("../../defaultConf.json"));
   }
 
-  void Config::loadConfig(string path){
-
+  std::vector<SourceGroup>  Config::loadConfig(string path){
+    std::vector<SourceGroup> sourceGroups;
     Settings::get().load(path);
     string enclosingDir = ofFilePath::getEnclosingDirectory(path);
 
 
     // LAYOUTS
-
+    std::map<int,int> confNumToStoredLayoutConf;
     if(Settings::get().exists("layouts")){
       // count folders, init layoutConf
-      n_layoutConfs = 0;
-      int thisFolder = 0;
-      while(Settings::get().exists("layouts/"+std::to_string(thisFolder++))){
-        n_layoutConfs++;
-      }
 
-      layoutConf = new int*[n_layoutConfs];
-      cout << ofToString(n_layoutConfs) <<" layout groups" << endl;
+      //if(n_layoutConfs == 0){;
+      int thisFolder = 0;
+      int thisConfLayouts = 0;
+      while(Settings::get().exists("layouts/"+std::to_string(thisFolder++))){
+        thisConfLayouts++;
+      }
+      //layoutConf = new int*[n_layoutConfs];
+      cout << ofToString(thisConfLayouts) <<" layout groups" << endl;
 
       // for each, split the data in N_LAYOUT numbers
-      for(thisFolder = 0; thisFolder < n_layoutConfs; thisFolder++){
+      for(thisFolder = 0; thisFolder < thisConfLayouts; thisFolder++){
         std::vector<string> positions = ofSplitString(Settings::getString("layouts/"+std::to_string(thisFolder)),",");
-        layoutConf[thisFolder] = new int[N_LAYOUTS];
-        for(unsigned j=0;j<positions.size() && j<N_LAYOUTS;j++){
-          layoutConf[thisFolder][j] = std::stoi(positions[j]);
+        //layoutConf.push_back(new int[N_LAYOUTS]);
+        std::array<int,N_LAYOUTS-1> thisLayout;
+        for(unsigned j=0;j<positions.size() && j<(N_LAYOUTS-1);j++){
+          thisLayout[j] = std::stoi(positions[j]);
         }
+
+        // add layout to storage only if it's not already there
+        if(std::find(layoutConf.begin(), layoutConf.end(), thisLayout) == layoutConf.end()) {
+          layoutConf.push_back(thisLayout);
+        }
+        confNumToStoredLayoutConf[thisFolder] = std::distance(layoutConf.begin(),std::find(layoutConf.begin(), layoutConf.end(), thisLayout));
+
       }
+
+      n_layoutConfs = layoutConf.size();
     }
 
     // SOURCES
@@ -93,6 +106,9 @@ void Config::findConfig(){
 
         if(Settings::get().exists("sources/"+std::to_string(thisFolder)+"/layout")){
           thisLayout = Settings::getInt("sources/"+std::to_string(thisFolder)+"/layout");
+          if(confNumToStoredLayoutConf.find(thisLayout)!=confNumToStoredLayoutConf.end()){
+            thisLayout = confNumToStoredLayoutConf[thisLayout];
+          }
         }
 
         if(Settings::get().exists("sources/"+std::to_string(thisFolder)+"/size")){
@@ -119,6 +135,8 @@ void Config::findConfig(){
     if(Settings::get().exists("mappings")){
       loadMidiMappings();
     }
+
+    return sourceGroups;
 
   }
 
