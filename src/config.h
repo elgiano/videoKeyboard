@@ -66,6 +66,7 @@ class Config {
       int first_midinote;
       int midi_port;
       int midi_port2;
+    std::vector<int> midi_ports;
       float fade_in;
       float fade_out;
 

@@ -357,7 +357,9 @@ void ofApp::drawVideoInLayout(int movieN){
             if(blending_multiply && thisLayoutInit[layoutPos]++==0){
                 drawWhiteBg(screenW/2*layoutPos,(screenH/2-(screenW/2*h/w))/2+(layout>0?0:screenH/2), screenW/2, screenW/2*h/w);
             }
-          thisTexture.draw(screenW/2*layoutPos,(screenH/2-(screenW/2*h/w))/2+(layout>0?0:screenH/2), screenW/2, screenW/2*h/w);
+          thisTexture.drawSubsection(screenW/2*layoutPos,(layout>0?0:screenH/2), screenW/2, screenH/2,
+              w*((1-(screenW/screenH))/2),0,
+              w*(screenW/screenH),h);
           if(blending_multiply){drawBrightnessLayer(screenW/2*layoutPos,(screenH/2-(screenW/2*h/w))/2+(layout>0?0:screenH/2), screenW/2, screenW/2*h/w);}
         }else{
             if(blending_multiply && thisLayoutInit[layoutPos]++==0){
@@ -384,16 +386,21 @@ void ofApp::drawVideoInLayout(int movieN){
     case 5:
       // split in 4
           if(blending_multiply && thisLayoutInit[layoutPos]++==0){
-              drawWhiteBg(screenW/2*(layoutPos%2),
-                          (screenH/2*(layoutPos/2%2))+(screenH/2-(screenW/2*h/w))/2,
-                          screenW/2, screenW/2*h/w);
+              drawWhiteBg(screenW/2*(layoutPos%2),(screenH/2*(layoutPos/2%2))+(screenH/2-(screenW/2*h/w))/2,
+                          screenW/2, screenH/2);
+
           }
-      thisTexture.draw(screenW/2*(layoutPos%2),
-                        (screenH/2*(layoutPos/2%2))+(screenH/2-(screenW/2*h/w))/2,
-                        screenW/2, screenW/2*h/w);
+          thisTexture.drawSubsection(screenW/2*(layoutPos%2),
+                           (screenH/2*(layoutPos/2%2))+(screenH/2-(screenW/2*h/w))/2,
+                           screenW/2, screenH/2,
+                           w*((1-(screenW/screenH))/2),0,
+                           w*(screenW/screenH),h);
+
+          
           if(blending_multiply){drawBrightnessLayer(screenW/2*(layoutPos%2),
                                                     (screenH/2*(layoutPos/2%2))+(screenH/2-(screenW/2*h/w))/2,
-                                                    screenW/2, screenW/2*h/w);}
+                                                    screenW/2, screenH/2);
+}
 
 
   }
@@ -404,7 +411,7 @@ void ofApp::drawVideoInLayout(int movieN){
 void ofApp::drawBrightnessLayer(int x, int y, int w, int h){
     ofEnableBlendMode(OF_BLENDMODE_ADD);
     ofSetColor(brightness, brightness, brightness);
-    ofDrawRectangle(x, y, w, h);
+    ofDrawRectangle(x, y+1, w, h-1);
 }
 void ofApp::drawWhiteBg(int x, int y, int w, int h){
     ofEnableBlendMode(OF_BLENDMODE_ADD);
@@ -793,7 +800,7 @@ void ofApp::stopSostenutoFreeze(){
 
 float ofApp::harmonicLoopDur(int key){
   int octave = floor((key - setStart[activeSet])/12);
-  float ratio = semitoneToRatio[(first_midinote + key - setStart[activeSet]) % 12] ;
+  float ratio = semitoneToRatio[(settings.first_midinote + key - setStart[activeSet]) % 12] ;
   float dur = harmonicLoopBaseDur / (ratio * octave);
     cout << dur << " = " << harmonicLoopBaseDur << " / (" << ratio << "x" << octave << ")" << endl;
   return harmonicLoopBaseDur / (ratio * octave);
