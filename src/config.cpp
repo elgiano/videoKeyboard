@@ -154,16 +154,18 @@ std::vector<SourceGroup> Config::findConfig(){
         midiMappings[k] = value;
         cout << k << ": " << value << endl;
       }
+      
+    }
       if(Settings::get().exists(prefix+"first_midinote")){
-        first_midinote = Settings::getInt(prefix+"first_midinote");
+          first_midinote = Settings::getInt(prefix+"first_midinote");
+          cout << "first_midinote" << first_midinote << endl;
       }
       if(Settings::get().exists(prefix+"midi_port")){
-        midi_port = Settings::getInt(prefix+"midi_port");
+          midi_port = Settings::getInt(prefix+"midi_port");
       }
       if(Settings::get().exists(prefix+"midi_port2")){
-            midi_port2=Settings::getInt(prefix+"midi_port2");
+          midi_port2=Settings::getInt(prefix+"midi_port2");
       }
-    }
 
     // flop list for faster search on midi message
     for (map<string, int>::iterator i = midiMappings.begin(); i != midiMappings.end(); ++i){
