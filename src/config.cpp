@@ -156,15 +156,19 @@ std::vector<SourceGroup> Config::findConfig(){
       }
       
     }
+      
+      // midi config values: lowest note and ports
       if(Settings::get().exists(prefix+"first_midinote")){
           first_midinote = Settings::getInt(prefix+"first_midinote");
           cout << "first_midinote" << first_midinote << endl;
       }
-      if(Settings::get().exists(prefix+"midi_port")){
-          midi_port = Settings::getInt(prefix+"midi_port");
-      }
-      if(Settings::get().exists(prefix+"midi_port2")){
-          midi_port2=Settings::getInt(prefix+"midi_port2");
+      if(Settings::get().exists(prefix+"midi_ports")){
+          std::vector<string> midi_portsStr = ofSplitString(Settings::getString(prefix+"midi_ports"),",");
+          for(auto str : midi_portsStr){
+              if(std::find(midi_ports.begin(), midi_ports.end(), stoi(str)) == midi_ports.end()) {
+                  midi_ports.push_back(stoi(str));
+              }
+          }
       }
 
     // flop list for faster search on midi message

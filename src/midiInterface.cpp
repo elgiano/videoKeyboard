@@ -1,17 +1,16 @@
 #include "ofApp.h"
 
 void ofApp::setupMidi(){
-  //ofSetVerticalSync(true);
-  //ofSetLogLevel(OF_LOG_VERBOSE);
 
   cout << "setupMidi()" << endl;
-  midiIn.openPort(settings.midi_port);
-  midiIn.addListener(this);
-    cout << settings.midi_port2 << endl;
-  if(settings.midi_port2>=0){
-      midiIn2.openPort(settings.midi_port2);
-      midiIn2.addListener(this);
-  }
+    cout << "midi_ports " << endl;
+    for(auto port : settings.midi_ports){
+        cout << port << endl;
+        ofxMidiIn m_in;
+        m_in.openPort(port);
+        m_in.addListener(this);
+        midiInputs.push_back(m_in);
+    }
 }
 
 int ofApp::midiNoteToVideoKey(int note){
@@ -33,11 +32,11 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
   switch(msg.status) {
     case MIDI_NOTE_ON :
       if(msg.velocity>0){
-        playVideo(midiNoteToVideoKey(msg.pitch-first_midinote),(float) msg.velocity/127);
+        playVideo(midiNoteToVideoKey(msg.pitch-settings.first_midinote),(float) msg.velocity/127);
         break;
       }
     case MIDI_NOTE_OFF:
-      stopVideo(midiNoteToVideoKey(msg.pitch-first_midinote));
+      stopVideo(midiNoteToVideoKey(msg.pitch-settings.first_midinote));
       break;
     case MIDI_POLY_AFTERTOUCH:
       //cout << msg.value << endl;
