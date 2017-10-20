@@ -16,6 +16,7 @@ void ofApp::setupMidi(){
 
 int ofApp::midiNoteToVideoKey(int note){
     int key;
+
     if(activeSet < (loadedSets-1)){
         key = setStart[activeSet] + (note%(setStart[activeSet+1]-setStart[activeSet]));
     }else{

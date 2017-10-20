@@ -27,3 +27,13 @@ addons.make
 bin/defaultConf.json
 config.make
 Makefile
+videoKeyboard2.xcodeproj/project.pbxproj
+videoKeyboard2.xcodeproj/project.xcworkspace/contents.xcworkspacedata
+videoKeyboard2.xcodeproj/project.xcworkspace/xcuserdata/sorenkjaergaard.xcuserdatad/UserInterfaceState.xcuserstate
+videoKeyboard2.xcodeproj/xcshareddata/xcschemes/videoKeyboard2 Debug.xcscheme
+*.xcscheme
+videoKeyboard2.xcodeproj/xcuserdata/sorenkjaergaard.xcuserdatad/xcschemes/xcschememanagement.plist
+Makefile
+Makefile
+*.make
+.DS_Store
