@@ -145,9 +145,9 @@ std::vector<SourceGroup> Config::findConfig(){
     string prefix = Settings::get().exists("mappings/") ? "mappings/" : "";
 
     // iterate midi keys
-    for(std::map<string,int>::iterator iter = midiMappings.begin(); iter != midiMappings.end(); ++iter)
+    for(auto &pair : midiMappingsStringsToCommand)
     {
-      string k =  iter->first;
+        string k =  pair.first;//iter->first;
       int value = 0;
       if(Settings::get().exists(prefix+k)){
         value = Settings::getInt(prefix+k);

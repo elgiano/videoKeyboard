@@ -79,6 +79,7 @@ class Config {
       std::vector<SourceGroup> loadConfig(string path);
       void loadDefaultMidiMappings();
       void loadMidiMappings();
+      void initMidiMappings();
 
       //std::vector<SourceGroup> sourceGroups;
 
@@ -128,55 +129,8 @@ class Config {
        {"blending_add_switch", MidiCommand::blending_add_switch},
       };
 
-      std::map<string, int> midiMappings = {
-       {"fade_in", 22},
-       {"fade_out", 23},
-       {"global_speed", -1},
-       {"layout_change", 1},
-       {"brightness" , 2},
-       {"sustain", 64},
-       {"sostenuto", 65},
-       {"sostenuto_freeze", 66},
-       {"dynamics_switch", 24},
-       {"fade_switch", 25},
-       {"blending_multiply_switch", 26},
-       {"source_shuffle_switch", 27},
-       {"sustain_mode", 28 },
-       {"loop_mode", 29 },
-       {"speed_dynamics", 30 },
-       {"layout_shuffle", 31 },
-       {"dynamics_decay", 32 },
-       {"global_volume", 33 },
-       {"stutter_mode", 34 },
-              {"stutter_dur_global", 43 },
-
-       {"dynamics_volume", 41 },
-       {"rms_normalize", 42 },
-       {"harmonic_loops", 43 },
-       {"harmonic_loop_base_dur", 44 },
-       {"speed_reverse", 45 },
-       {"switch_to_layout_0", 35},
-       {"switch_to_layout_1", 36 },
-       {"switch_to_layout_2", 37 },
-       {"switch_to_layout_3", 38 },
-       {"switch_to_layout_4", 39},
-       {"switch_to_layout_5", 40},
-       {"switch_to_set_0", 46},
-       {"switch_to_set_1", 47 },
-       {"switch_to_set_2", 48},
-       {"switch_to_set_3", 49 },
-       {"switch_to_set_4", 50 },
-       {"switch_to_set_5", 51 },
-              {"ribattutoSpeed", 52 },
-              {"panic", 53 },
-              {"brightness_opacity" , 54},
-              {"sound_fade_time" , 55},
-              {"rms_correction_pct" , 56},
-              {"blending_add_switch", 57}
-      };
-
-
-  		std::map<int,MidiCommand> midiMapByValue;
+    std::map<string, int> midiMappings;
+    std::map<int,MidiCommand> midiMapByValue;
 
       std::vector<std::array<int,(N_LAYOUTS-1)>> layoutConf;
 
