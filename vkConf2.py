@@ -1,5 +1,5 @@
 #!/bin/python
-#/Users/sorenkjaergard/Documents/openFrameworks/apps/myApps/videoKeyboard-master/bin/sets
+#/home/giano/projects/soren/videoKeyboardHap/bin/sets
 
 from os import listdir, mkdir,rmdir, symlink, remove, rename
 from os.path import isdir, isfile, join, getsize, abspath, isabs,realpath, basename
@@ -11,6 +11,7 @@ from pprint import pprint
 from sys import exc_info
 import re
 from rtmidi.midiutil import open_midiinput
+import rtmidi
 
 class LayoutSelectorGroup(Gtk.HBox):
 
@@ -237,7 +238,7 @@ class MyWindow(Gtk.Window):
 
     def askForConfirmation(self,title="",text=""):
         dialog = Gtk.Dialog(title,self)
-        dialog.set_position(Gtk.WindowPosition.CENTER)
+        dialog.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
         dialog.vbox.pack_start(Gtk.Label(text,xalign=0),False,True,0)
         dialog.add_button(Gtk.STOCK_CANCEL,Gtk.ResponseType.CANCEL)
         dialog.add_button(Gtk.STOCK_OK,Gtk.ResponseType.OK)
@@ -352,7 +353,7 @@ class MyWindow(Gtk.Window):
 
     def saveDialog(self,*argv):
         dialog = Gtk.Dialog("Save Changes",self)
-        dialog.set_position(Gtk.WindowPosition.CENTER)
+        dialog.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
 
         dialog.vbox.set_property("spacing",30)
         dialog.vbox.pack_start(Gtk.Label("These sets have unsaved changes:",xalign=0),False,True,0)
@@ -568,7 +569,7 @@ class MyWindow(Gtk.Window):
             path = join(join(self.setsDir,self.sets[self.selectedSet]),path)
         print(path)
 
-        self.videos = [f for f in listdir(path) if isfile(join(path,f)) and not f.endswith(".json")]
+        self.videos = [f for f in listdir(path) if isfile(join(path,f)) and not f.endswith(".json") and not f=="rms"]
         self.videos = self.removeDSStore(path,self.videos)
         self.videos.sort()
         self.clearVideosListStore()
@@ -613,7 +614,7 @@ class MyWindow(Gtk.Window):
 
     def newSetDialog(self):
         dialog = Gtk.Dialog("Create New Set",self)
-        dialog.set_position(Gtk.WindowPosition.CENTER)
+        dialog.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
 
         dialog.vbox.pack_start(Gtk.Label("New set name:",xalign=0),False,True,0)
         txt = Gtk.Entry()
@@ -694,7 +695,7 @@ class MyWindow(Gtk.Window):
 
     def newGroupDialog(self,*argv):
         dialog = Gtk.Dialog("Create New Source Group",self)
-        dialog.set_position(Gtk.WindowPosition.CENTER)
+        dialog.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
 
         stack = Gtk.Stack()
         stack.set_transition_type(Gtk.StackTransitionType.SLIDE_LEFT_RIGHT)
@@ -877,7 +878,7 @@ class MyWindow(Gtk.Window):
 
         Gtk.Window.__init__(self, title="VideoKeys Configuration")
         self.set_border_width(10)
-        self.set_position(Gtk.WindowPosition.CENTER)
+        self.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
 
         self.connect('destroy', Gtk.main_quit)
         self.connect('delete-event', self.on_destroy)
@@ -928,13 +929,16 @@ class MyWindow(Gtk.Window):
 
         box_setSection.pack_start(setListLayout,True, True, 0)
 
-        self.newSetBtn = Gtk.Button("+ Create New")
+        self.newSetBtn = Gtk.Button("+ New Set")
         self.newSetBtn.connect("clicked",self.createNewSet)
         midiBtn = Gtk.Button("MIDI mappings")
         midiBtn.connect("clicked",self.midiMappingDialog)
+        midiDevBtn = Gtk.Button("MIDI devices")
+        midiDevBtn.connect("clicked",self.midiPortDialog)
         btnBox = Gtk.HBox()
         btnBox.pack_start(self.newSetBtn,True,True,0)
         btnBox.pack_start(midiBtn,True,True,0)
+        btnBox.pack_start(midiDevBtn,True,True,0)
         box_setSection.pack_start(btnBox,False,True,0)
 
         box_outer.pack_start(box_setSection,True,True,0)
@@ -1219,20 +1223,32 @@ class MyWindow(Gtk.Window):
     # MIDI MAPPING dialog
     def midiMappingDialog(self,*argv):
         dialog = Gtk.Dialog("MIDI Mapping",self)
-        dialog.set_position(Gtk.WindowPosition.CENTER)
+        dialog.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
 
         self.loadMidiConf()
 
+        midiListScroll = Gtk.ScrolledWindow()
+        midiListScroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+
+
         midiList =  Gtk.TreeView(self.midiListStore)
-        midiList.append_column(Gtk.TreeViewColumn("Function",Gtk.CellRendererText(),text=1))
+        col = Gtk.TreeViewColumn("Function",Gtk.CellRendererText(),text=1)
+        col.set_sort_column_id(1)
+        midiList.append_column(col)
         midiSpin = Gtk.CellRendererSpin()
         midiSpin.set_property("editable",True)
         midiSpin.set_property("adjustment", Gtk.Adjustment(0,-1,127,1,1,1))
         midiSpin.connect("edited",self.midiMappingEdited)
         midiSpin.connect("editing-started",self.midiLearn)
-        midiList.append_column(Gtk.TreeViewColumn("MIDI",midiSpin,text=2))
+        col = Gtk.TreeViewColumn("MIDI",midiSpin,text=2)
+        col.set_sort_column_id(2)
+        midiList.append_column(col)
 
-        dialog.vbox.pack_start(midiList,True,True,0)
+        midiListScroll.add(midiList)
+
+        midiListScroll.set_size_request(100,dialog.get_screen().get_height()/2)
+
+        dialog.vbox.pack_start(midiListScroll,True,True,0)
         dialog.add_button(Gtk.STOCK_CANCEL,Gtk.ResponseType.CANCEL)
         dialog.add_button(Gtk.STOCK_OK,Gtk.ResponseType.OK)
         dialog.show_all()
@@ -1241,19 +1257,12 @@ class MyWindow(Gtk.Window):
 
     def loadMidiConf(self):
         self.midiListStore.clear()
-        '''if "mappings" in self.defaultConfig:
-            for funcName in self.defaultConfig["mappings"]:
-                print(funcName)
-                code = self.defaultConfig["mappings"][funcName]
-                if funcName in self.selectedConf()["mappings"]:
-                    code = self.selectedConf()["mappings"][funcName]
-                prFuncName = funcName.replace("_"," ").title()
-                self.midiListStore.append([funcName,prFuncName,code])'''
         if self.midi_mappings:
             for funcName in self.midi_mappings:
-                code = self.midi_mappings[funcName]
-                prFuncName = funcName.replace("_"," ").title()
-                self.midiListStore.append([funcName,prFuncName,code])
+                if funcName != "midi_ports":
+                    code = self.midi_mappings[funcName]
+                    prFuncName = funcName.replace("_"," ").title()
+                    self.midiListStore.append([funcName,prFuncName,code])
 
     def midiMappingEdited(self,renderer,path,newValue):
         # update model
@@ -1269,6 +1278,7 @@ class MyWindow(Gtk.Window):
     # MIDI
 
     def initMidi(self):
+        self.midi_inputs = []
         try:
             self.midi_in, port = open_midiinput(self.midi_port)
             self.midi_in.set_callback(self.midiCallback)
@@ -1280,6 +1290,46 @@ class MyWindow(Gtk.Window):
         self.midi_in.close_port()
         self.midi_in.open_port(self.midi_port)
         self.midi_in.set_callback(self.midiCallback)
+
+    def connectToMidiPorts(self,ports):
+        for m_in in self.midi_inputs:
+            m_in.close_port()
+        self.midi_inputs = []
+        for port in ports:
+            midi_in,mport = open_midiinput(port)
+            midi_in.set_callback(self.midiCallback)
+            self.midi_inputs.append(midi_in)
+
+    def midiPortDialog(self,otherArg):
+       dialog = Gtk.Dialog("Choose MIDI devices",self)
+
+       deviceList = rtmidi.MidiIn(rtmidi.API_UNSPECIFIED).get_ports()
+       print(deviceList)
+       availableListStore = Gtk.ListStore(int,str)
+       for (i,devName) in enumerate(deviceList):
+           availableListStore.append([i,devName])
+       availableList = Gtk.TreeView(availableListStore)
+       availableList.append_column(Gtk.TreeViewColumn("Select Devices",Gtk.CellRendererText(),text=1))
+       availableList.get_selection().set_mode(Gtk.SelectionMode.MULTIPLE)
+       dialog.vbox.pack_start(availableList,True,True,0)
+
+       dialog.add_button(Gtk.STOCK_CANCEL,Gtk.ResponseType.CANCEL)
+       dialog.add_button("Save",Gtk.ResponseType.OK)
+
+       dialog.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
+       dialog.show_all()
+
+       response = dialog.run()
+       if response == Gtk.ResponseType.OK:
+           (model,selected) = availableList.get_selection().get_selected_rows()
+           indices = [model[sel][0] for sel in selected]
+           portString = ",".join([str(p) for p in indices])
+           self.midi_mappings["midi_ports"] = portString
+           self.connectToMidiPorts(indices)
+       elif response == Gtk.ResponseType.CANCEL:
+           print("Save canceled")
+
+       dialog.destroy()
 
     # MIDI LEARN
 
