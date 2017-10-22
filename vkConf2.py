@@ -3,6 +3,7 @@
 
 from os import listdir, mkdir,rmdir, symlink, remove, rename
 from os.path import isdir, isfile, join, getsize, abspath, isabs,realpath, basename
+from shutil import copytree
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk,Gdk,GObject
@@ -238,14 +239,27 @@ class MyWindow(Gtk.Window):
 
     def askForConfirmation(self,title="",text=""):
         dialog = Gtk.Dialog(title,self)
-        dialog.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
         dialog.vbox.pack_start(Gtk.Label(text,xalign=0),False,True,0)
         dialog.add_button(Gtk.STOCK_CANCEL,Gtk.ResponseType.CANCEL)
         dialog.add_button(Gtk.STOCK_OK,Gtk.ResponseType.OK)
         dialog.show_all()
+        dialog.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
+
         response = dialog.run()
         dialog.destroy()
         return response == Gtk.ResponseType.OK
+
+    def askOptions(self,title="",text="",options=[]):
+        dialog = Gtk.Dialog(title,self)
+        dialog.set_position(Gtk.WindowPosition.CENTER)
+        dialog.vbox.pack_start(Gtk.Label(title,xalign=0),False,True,0)
+        dialog.vbox.pack_start(Gtk.Label(text,xalign=0),False,True,0)
+        for op in options:
+            dialog.add_button(op[0],op[1])
+        dialog.show_all()
+        response = dialog.run()
+        dialog.destroy()
+        return response
 
     def defaultSetToggled(self,cellrenderer,path):
         # ask for confirmation
@@ -298,16 +312,32 @@ class MyWindow(Gtk.Window):
 
         self.validateConfigs()
 
-    def isMultipleSet(self,set_number):
+    def isMultipleSet(self,set_number=None):
+        if set_number == None:
+            return False
         for src in self.configs[set_number]['sources']:
             if self.configs[set_number]['sources'][src]['type'] == "multiple":
                 return True
         return False
 
+    def loadSubsetConfigs(self):
+        self.subsetConfigs = [None for f in self.subSets]
+        for i,subset in enumerate(self.subSets):
+            confFile = join(self.setsDir,self.sets[self.selectedSet],subset,"config.json")
+            if isfile(confFile):
+                with open(confFile) as data_file:
+                    try:
+                        self.subsetConfigs[i] = json.load(data_file)
+                    except ValueError:
+                        print("JSONDecodeError: "+confFile)
+
+        self.validateConfigs()
+
     def writeConfig(self,set_number):
-        path = join(self.setsDir,"../midi_mappings.json") if set_number==(-1) else join(self.setsDir,self.sets[set_number],"config.json")
-        conf = self.midi_mappings if set_number==(-1) else self.configs[set_number]
-        #path = join(self.setsDir,self.sets[set_number],"config.json")
+        isMul = self.isMultipleSet(self.selectedSet)
+        path = join(self.setsDir,self.sets[self.selectedSet] if isMul else self.sets[set_number],self.subSets[set_number] if isMul else "","config.json")
+        path = join(self.setsDir,"../midi_mappings.json") if set_number==(-1) else path
+        conf = self.midi_mappings if set_number==(-1) else (self.configs if not isMul else self.subsetConfigs)[set_number]
         print("id:"+str(set_number)+" writing "+path)
         with open(path,"w") as data_file:
             try:
@@ -316,7 +346,7 @@ class MyWindow(Gtk.Window):
                 pprint(exc_info())
 
     def saveAllConfigs(self):
-        for i,c in enumerate(self.configs):
+        for i,c in enumerate(self.configs if not self.isMultipleSet(self.selectedSet) else self.subsetConfigs ):
             if(c!=None):
                 self.writeConfig(i)
 
@@ -324,18 +354,20 @@ class MyWindow(Gtk.Window):
         if(self.selectedConf() != None):
             self.writeConfig(self.selectedSet)
 
+    # TODO: save multiple sets!
     def findUnsavedConfigs(self):
+        isMulti = self.isMultipleSet(self.selectedSet)
         unsavedList = []
-        for i,set in enumerate(self.sets):
+        for i,set in enumerate(self.sets if not isMulti else self.subSets):
             origConf = None
-            origConfFile = join(join(self.setsDir,set),"config.json")
+            origConfFile = join(self.setsDir,"" if not isMulti else self.sets[self.selectedSet],set,"config.json")
             if isfile(origConfFile):
                 with open(origConfFile) as data_file:
                     try:
                         origConf = json.load(data_file)
                     except ValueError:
                         print("JSONDecodeError: "+origConfFile)
-            if origConf != self.configs[i]:
+            if origConf != (self.configs if not isMulti else self.subsetConfigs)[i]:
                 unsavedList.append([i,set])
         mm = self.findUnsavedMappings()
         if mm:
@@ -359,12 +391,10 @@ class MyWindow(Gtk.Window):
 
     def saveDialog(self,*argv):
         dialog = Gtk.Dialog("Save Changes",self)
-        dialog.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
 
         dialog.vbox.set_property("spacing",30)
         dialog.vbox.pack_start(Gtk.Label("These sets have unsaved changes:",xalign=0),False,True,0)
 
-        unsavedList = self.findUnsavedConfigs()
         saveList = Gtk.Grid()
         saveList.set_row_spacing(10)
         dialog.vbox.pack_start(saveList,True,True,0)
@@ -374,6 +404,8 @@ class MyWindow(Gtk.Window):
         dialog.add_button(Gtk.STOCK_CANCEL,Gtk.ResponseType.CANCEL)
         dialog.add_button("Save All",Gtk.ResponseType.OK)
         dialog.show_all()
+        dialog.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
+
 
         response = dialog.run()
         if response == Gtk.ResponseType.OK:
@@ -405,18 +437,26 @@ class MyWindow(Gtk.Window):
 
 
     def validateConfigs(self):
-        for i,conf in enumerate(self.configs):
+        if self.isMultipleSet(self.selectedSet):
+            configs = self.subsetConfigs
+        else:
+            configs = self.configs
+
+        for i,conf in enumerate(configs):
             if conf != None:
                 #for key in ["general","sources","layouts","mappings"]:
                 for key in ["sources","layouts"]:
                     if key not in conf:
                         conf[key] = {}
             else:
-                self.configs[i] = self.defaultConfig.copy()
+                configs[i] = self.defaultConfig.copy()
 
     # config shortcuts
     def selectedConf(self):
-        return self.configs[self.selectedSet]
+        if self.isMultipleSet(self.selectedSet):
+            return self.subsetConfigs[self.selectedSubset]
+        else:
+            return self.configs[self.selectedSet]
 
     def selectedSourceConf(self):
         return self.selectedConf()["sources"][str(self.selectedGroup)]
@@ -445,18 +485,18 @@ class MyWindow(Gtk.Window):
 
         self.clearVideosListStore()
         self.layoutsListStore.clear()
-        self.updateLayoutsCount()
 
         if self.isMultipleSet(self.selectedSet):
             self.groupsSection.set_child_visible(False)
             self.fillSubsets()
+            self.loadSubsetConfigs()
             self.multiSetLabel.set_text("Multiple Set: "+self.sets[self.selectedSet])
             self.leftPanel.set_visible_child_name("multi")
 
         else:
 
             self.groupsSection.set_child_visible(True)
-
+            self.updateLayoutsCount()
 
             if(self.selectedConf()):
                 self.fillGroupsList()
@@ -470,33 +510,132 @@ class MyWindow(Gtk.Window):
 
 
     def fillSubsets(self):
-        '''try:
-            self.videoListStore.disconnect_by_func(self.videosReordered)
-        except:
-            print("")'''
-        self.multiListStore.clear()
-        path = path = join(self.setsDir,self.sets[self.selectedSet])
+        self.clearMultiListStore()
+        path = join(self.setsDir,self.sets[self.selectedSet])
         print(path)
 
         self.subSets = [f for f in listdir(path) if isdir(join(path,f))]
         self.subSets.sort()
         #self.clearVideosListStore()
         for i,subSet in enumerate(self.subSets):
-            #self.multiListStore.append([i,self.videoName(video),video])
-            self.multiListStore.append([i,subSet])
+            self.multiListStore.append([i,self.videoName(subSet),subSet])
         #self.videoListStore.connect("row-deleted",self.videosReordered)
 
 
     def selectSubset(self,*args):
-        print(args)
+        model,iter = self.multiList.get_selection().get_selected_rows()
+        if not iter:
+            return False
+        self.selectedSubset = iter[0].get_indices()[0]
+
+        self.clearVideosListStore()
+        self.layoutsListStore.clear()
+        self.groupsSection.set_child_visible(True)
+
+        if(self.selectedConf()):
+            self.fillGroupsList(True)
+            self.updateLayoutsCount()
+            self.fillLayoutsList()
+        else:
+            self.clearGroupsListStore()
+            self.configs[self.selectedSet] = self.defaultConfig.copy()
+
+    def subsetsReordered(self,*argv):
+        setPath = join(self.setsDir,self.sets[self.selectedSet])
+        # move all to tmp
+        if not isdir(join(setPath,"tmp")):
+            mkdir(join(setPath,"tmp"))
+        for i,row in enumerate(self.multiListStore):
+            rename(join(setPath,row[2]),join(setPath,"tmp",row[2]))
+        # move all back, change prefix to new order
+        for i,row in enumerate(self.multiListStore):
+            # update list model
+            row[0] = i
+            # move files
+            newName =  str(i).zfill(2) + "-" + row[1]
+            print(str(i))
+            print(str(i).zfill(2))
+            print(newName)
+            rename(join(setPath,"tmp",row[2]),join(setPath,newName))
+            row[2] = newName
+        rmdir(join(setPath,"tmp"))
+        self.multiList.disconnect_by_func(self.selectSubset)
+        self.selectSet()
+        self.multiList.connect("cursor-changed",self.selectSubset)
+
+
     def createNewSubset(self,*args):
-        print(args)
+        dialog = Gtk.Dialog("Add New Subset",self)
+        dialog.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
+
+        listView = Gtk.TreeView(self.setListStore)
+        listView.get_selection().set_mode(Gtk.SelectionMode.MULTIPLE)
+        listView.append_column( Gtk.TreeViewColumn("Sets",Gtk.CellRendererText(),text=1))
+        dialog.vbox.pack_start(listView,False,True,0)
+
+
+        dialog.add_button(Gtk.STOCK_CANCEL,Gtk.ResponseType.CANCEL)
+        dialog.add_button(Gtk.STOCK_OK,Gtk.ResponseType.OK)
+        dialog.show_all()
+
+        done = False
+        while not done:
+            done = True
+            response = dialog.run()
+            if response == Gtk.ResponseType.OK:
+                (model,selected) = listView.get_selection().get_selected_rows()
+                if(selected):
+                    choice = self.askOptions(
+                        "Do you want to create a new folder or just a link?",
+                        "A new folder will be an independent copy of the selected sets",
+                        [["Copy",1],["Link",2],["Cancel",0]]
+                    );
+                    done = True
+                    if choice>0:
+                        for sel in selected:
+                            srcPath = join(self.setsDir,self.setListStore[sel][1])
+                            dstPath = join(self.setsDir,self.sets[self.selectedSet],self.setListStore[sel][1])
+                            if choice==1:
+                                try:
+                                    copytree(srcPath,dstPath)
+                                except:
+                                    error = Gtk.MessageDialog(dialog,0,Gtk.MessageType.ERROR,Gtk.ButtonsType.CANCEL,exc_info()[1])
+                                    error.run()
+                                    error.destroy()
+                            if choice==2:
+                                try:
+                                    symlink(srcPath,dstPath)
+                                except:
+                                    error = Gtk.MessageDialog(dialog,0,Gtk.MessageType.ERROR,Gtk.ButtonsType.CANCEL,exc_info()[1])
+                                    error.run()
+                                    error.destroy()
+                        self.multiList.disconnect_by_func(self.selectSubset)
+                        self.selectSet()
+                        self.multiList.connect("cursor-changed",self.selectSubset)
+
+
+            elif response == Gtk.ResponseType.CANCEL:
+                print("Set creation canceled")
+                done = True
+
+        dialog.destroy()
 
     def selectedSetPath(self,fileName=""):
-        return join(join(self.setsDir,self.sets[self.selectedSet]),fileName)
+        if self.isMultipleSet(self.selectedSet):
+            return join(self.setsDir,self.sets[self.selectedSet],self.subSets[self.selectedSubset],fileName)
+        else:
+            return join(self.setsDir,self.sets[self.selectedSet],fileName)
 
     def selectedGroupPath(self):
         return self.selectedSetPath(self.selectedSourceConf()["src"])
+
+    def clearMultiListStore(self):
+        try:
+            self.multiListStore.disconnect_by_func(self.subsetsReordered)
+        except TypeError:
+            print("nothing connected when disconnecting")
+        self.multiListStore.clear()
+        self.multiListStore.connect("row-deleted",self.subsetsReordered)
 
     def clearVideosListStore(self):
         try:
@@ -505,6 +644,7 @@ class MyWindow(Gtk.Window):
             print("nothing connected when disconnecting")
         self.videoListStore.clear()
         self.videoListStore.connect("row-deleted",self.videosReordered)
+
 
     def clearGroupsListStore(self):
         try:
@@ -515,7 +655,7 @@ class MyWindow(Gtk.Window):
         self.groupsListStore.connect("row-deleted",self.groupsReordered)
 
     # this should check the "sources" in the config
-    def parseSources(self):
+    def parseSources(self,fallbackPath):
         self.groups = [];
         conf = self.selectedConf()["sources"];
         keys = [int(key) for key in conf]
@@ -527,13 +667,15 @@ class MyWindow(Gtk.Window):
             if "layout" not in src:
                 src["layout"] = -1
             if "src" not in src:
-                src["src"] = join(self.setsDir,self.sets[self.selectedSet])
+                src["src"] = path
             if "type" not in src:
                 src["type"] = "folder"
 
-    def fillGroupsList(self):
+    def fillGroupsList(self,subset=False):
         path = join(self.setsDir,self.sets[self.selectedSet])
-        self.parseSources()
+        if subset:
+            path = join(path,self.subSets[self.selectedSubset])
+        self.parseSources(path)
         self.clearGroupsListStore()
 
         for i,group in enumerate(self.groups):
@@ -600,19 +742,18 @@ class MyWindow(Gtk.Window):
 
 
     def fillVideoList(self):
-        try:
-            self.videoListStore.disconnect_by_func(self.videosReordered)
-        except:
-            print("")
-        path = self.selectedSourceConf()["src"]
-        if not isabs(path):
-            path = join(join(self.setsDir,self.sets[self.selectedSet]),path)
+
+        path = self.selectedGroupPath()
         print(path)
 
         self.videos = [f for f in listdir(path) if isfile(join(path,f)) and not f.endswith(".json") and not f=="rms"]
         self.videos = self.removeDSStore(path,self.videos)
         self.videos.sort()
         self.clearVideosListStore()
+        try:
+            self.videoListStore.disconnect_by_func(self.videosReordered)
+        except:
+            print("")
         for i,video in enumerate(self.videos):
             # todo: extract duration
             self.videoListStore.append([i,self.videoName(video),video])
@@ -654,16 +795,19 @@ class MyWindow(Gtk.Window):
 
     def newSetDialog(self):
         dialog = Gtk.Dialog("Create New Set",self)
-        dialog.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
 
         dialog.vbox.pack_start(Gtk.Label("New set name:",xalign=0),False,True,0)
         txt = Gtk.Entry()
+        multi = Gtk.CheckButton("Multiple")
         dialog.vbox.pack_start(txt,False,True,0)
+        dialog.vbox.pack_start(multi,False,True,0)
 
 
         dialog.add_button(Gtk.STOCK_CANCEL,Gtk.ResponseType.CANCEL)
         dialog.add_button(Gtk.STOCK_OK,Gtk.ResponseType.OK)
         dialog.show_all()
+        dialog.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
+
 
         done = False
         while not done:
@@ -679,6 +823,10 @@ class MyWindow(Gtk.Window):
                         error.destroy()
                         done = False
                     if done:
+                        if multi.get_active():
+                            newConf = open(join(self.setsDir,txt.get_text(),"config.json"),"w+")
+                            newConf.write('{"sources": {"0": {"src": ".", "captureID": 0, "type": "multiple"}}, "layouts": {}}');
+                            newConf.close()
                         self.selectedSet = None
                         self.fillSetList()
                         done=True
@@ -735,7 +883,6 @@ class MyWindow(Gtk.Window):
 
     def newGroupDialog(self,*argv):
         dialog = Gtk.Dialog("Create New Source Group",self)
-        dialog.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
 
         stack = Gtk.Stack()
         stack.set_transition_type(Gtk.StackTransitionType.SLIDE_LEFT_RIGHT)
@@ -775,6 +922,8 @@ class MyWindow(Gtk.Window):
         dialog.add_button(Gtk.STOCK_CANCEL,Gtk.ResponseType.CANCEL)
         dialog.add_button(Gtk.STOCK_OK,Gtk.ResponseType.OK)
         dialog.show_all()
+        dialog.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
+
 
         done = False
         while not done:
@@ -906,6 +1055,7 @@ class MyWindow(Gtk.Window):
         # properties
         self.sets = []
         self.selectedSet = None
+        self.selectedSubset = None
         self.selectedGroup = None
 
         self.midi_port = 0
@@ -913,12 +1063,12 @@ class MyWindow(Gtk.Window):
         self.initMidi()
 
         self.configs = []
+        self.subsetConfigs = []
         self.setsDir = self.loadLastSetDir()
 
 
         Gtk.Window.__init__(self, title="VideoKeys Configuration")
         self.set_border_width(10)
-        self.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
 
         self.connect('destroy', Gtk.main_quit)
         self.connect('delete-event', self.on_destroy)
@@ -950,6 +1100,7 @@ class MyWindow(Gtk.Window):
         setDirLayout.pack_start(setDirBtn,False, True, 0)
 
         box_setSection.pack_start(setDirLayout, False, False, 0)
+
 
         self.setListStore = Gtk.ListStore(bool,str)
         self.setList = Gtk.TreeView(self.setListStore)
@@ -995,18 +1146,18 @@ class MyWindow(Gtk.Window):
         backBtn = Gtk.Button.new_with_label("< Back")
         backBtn.connect("clicked", self.backToSetList)
         multiHeadLayout = Gtk.HBox(homogeneous=False, spacing=3)
-        multiHeadLayout.pack_start(backBtn,True, True, 0)
-        multiHeadLayout.pack_start(self.multiSetLabel,False, True, 0)
+        multiHeadLayout.pack_start(backBtn,False, True, 0)
+        multiHeadLayout.pack_start(self.multiSetLabel,True, True, 0)
 
-        box_multiSection.pack_start(multiHeadLayout,True, True, 0)
+        box_multiSection.pack_start(multiHeadLayout,False, True, 0)
 
-        self.multiListStore = Gtk.ListStore(int,str)
+        self.multiListStore = Gtk.ListStore(int,str,str)
         self.multiList = Gtk.TreeView(self.multiListStore)
         self.multiList.append_column(Gtk.TreeViewColumn("#",Gtk.CellRendererText(),text=0))
         col = Gtk.TreeViewColumn("Sets",Gtk.CellRendererText(),text=1)
         col.set_expand(True)
         self.multiList.append_column(col)
-
+        self.multiList.set_reorderable(True)
         self.multiList.connect("cursor-changed",self.selectSubset)
 
         box_multiSection.pack_start(self.multiList,True, True, 0)
@@ -1094,7 +1245,13 @@ class MyWindow(Gtk.Window):
         self.videoListStore.connect("row-deleted",self.videosReordered)
         self.videoList.append_column(Gtk.TreeViewColumn("",Gtk.CellRendererText(),text=0))
         self.videoList.append_column(Gtk.TreeViewColumn("Videos",Gtk.CellRendererText(),text=1))
-        box_videoSection.pack_start(self.videoList,True,True,0)
+        videoListScroll = Gtk.ScrolledWindow()
+        videoListScroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        videoListScroll.add(self.videoList)
+        videoListScroll.set_size_request(100,self.get_screen().get_height()/3)
+
+
+        box_videoSection.pack_start(videoListScroll,True,True,0)
         # video buttons
         ### box_videoBtn = Gtk.HBox(homogeneous=True,spacing=5)
         btn = Gtk.Button("+ Import Videos")
@@ -1123,6 +1280,7 @@ class MyWindow(Gtk.Window):
 
 
         self.layoutsSection = Gtk.HBox(homogeneous=False,spacing=10)
+        self.layoutsSection.set_size_request(100,self.get_screen().get_height()/6)
 
         #   layout groups
         box_layoutsList = Gtk.VBox(homogeneous=False,spacing=0)
@@ -1154,6 +1312,9 @@ class MyWindow(Gtk.Window):
         self.groupsSection.set_child_visible(False)
         self.rightPanel.set_child_visible(False)
         self.layoutsGUI.set_child_visible(False)
+
+        self.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
+
 
         if isdir(self.setsDir):
             self.changeSetDir(self.setsDir)
@@ -1299,7 +1460,6 @@ class MyWindow(Gtk.Window):
     # MIDI MAPPING dialog
     def midiMappingDialog(self,*argv):
         dialog = Gtk.Dialog("MIDI Mapping",self)
-        dialog.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
 
         self.loadMidiConf()
 
@@ -1328,6 +1488,8 @@ class MyWindow(Gtk.Window):
         dialog.add_button(Gtk.STOCK_CANCEL,Gtk.ResponseType.CANCEL)
         dialog.add_button(Gtk.STOCK_OK,Gtk.ResponseType.OK)
         dialog.show_all()
+        dialog.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
+
         response = dialog.run()
         dialog.destroy()
 
@@ -1341,7 +1503,7 @@ class MyWindow(Gtk.Window):
                     prFuncName = funcName.replace("_"," ").title()
                     self.midiListStore.append([funcName,prFuncName,code])
                 else:
-                    self.midi_ports = [int(i) for i in self.midi_mappings["midi_ports"]]
+                    self.midi_ports = [int(i) for i in self.midi_mappings["midi_ports"].split(",")]
 
     def midiMappingEdited(self,renderer,path,newValue):
         # update model
@@ -1356,7 +1518,6 @@ class MyWindow(Gtk.Window):
 
     def midiDialog(self,otherArg):
         dialog = Gtk.Dialog("MIDI Mapping",self)
-        dialog.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
 
         self.loadMidiConf()
 
@@ -1405,6 +1566,8 @@ class MyWindow(Gtk.Window):
         dialog.add_button(Gtk.STOCK_CANCEL,Gtk.ResponseType.CANCEL)
         dialog.add_button(Gtk.STOCK_SAVE,Gtk.ResponseType.OK)
         dialog.show_all()
+        dialog.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
+
         response = dialog.run()
         # RESPONSE
 
@@ -1507,4 +1670,5 @@ class MyWindow(Gtk.Window):
 win = MyWindow()
 win.connect("delete-event", Gtk.main_quit)
 win.show_all()
+win.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
 Gtk.main()
