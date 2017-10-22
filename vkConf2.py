@@ -298,6 +298,12 @@ class MyWindow(Gtk.Window):
 
         self.validateConfigs()
 
+    def isMultipleSet(self,set_number):
+        for src in self.configs[set_number]['sources']:
+            if self.configs[set_number]['sources'][src]['type'] == "multiple":
+                return True
+        return False
+
     def writeConfig(self,set_number):
         path = join(self.setsDir,"../midi_mappings.json") if set_number==(-1) else join(self.setsDir,self.sets[set_number],"config.json")
         conf = self.midi_mappings if set_number==(-1) else self.configs[set_number]
@@ -436,21 +442,55 @@ class MyWindow(Gtk.Window):
     def selectSet(self,*argv):
         model,iter = self.setList.get_selection().get_selected_rows()
         self.selectedSet = iter[0].get_indices()[0]
-        #print(self.selectedSet)
-        self.groupsSection.set_child_visible(True)
 
         self.clearVideosListStore()
         self.layoutsListStore.clear()
-
         self.updateLayoutsCount()
 
-        if(self.selectedConf()):
-            self.fillGroupsList()
-            self.fillLayoutsList()
+        if self.isMultipleSet(self.selectedSet):
+            self.groupsSection.set_child_visible(False)
+            self.fillSubsets()
+            self.multiSetLabel.set_text("Multiple Set: "+self.sets[self.selectedSet])
+            self.leftPanel.set_visible_child_name("multi")
+
         else:
-            self.clearGroupsListStore()
-            self.configs[self.selectedSet] = self.defaultConfig.copy()
-        #self.loadSelectedSet()
+
+            self.groupsSection.set_child_visible(True)
+
+
+            if(self.selectedConf()):
+                self.fillGroupsList()
+                self.fillLayoutsList()
+            else:
+                self.clearGroupsListStore()
+                self.configs[self.selectedSet] = self.defaultConfig.copy()
+
+    def backToSetList(self,*args):
+        self.leftPanel.set_visible_child_name("sets")
+
+
+    def fillSubsets(self):
+        '''try:
+            self.videoListStore.disconnect_by_func(self.videosReordered)
+        except:
+            print("")'''
+        self.multiListStore.clear()
+        path = path = join(self.setsDir,self.sets[self.selectedSet])
+        print(path)
+
+        self.subSets = [f for f in listdir(path) if isdir(join(path,f))]
+        self.subSets.sort()
+        #self.clearVideosListStore()
+        for i,subSet in enumerate(self.subSets):
+            #self.multiListStore.append([i,self.videoName(video),video])
+            self.multiListStore.append([i,subSet])
+        #self.videoListStore.connect("row-deleted",self.videosReordered)
+
+
+    def selectSubset(self,*args):
+        print(args)
+    def createNewSubset(self,*args):
+        print(args)
 
     def selectedSetPath(self,fileName=""):
         return join(join(self.setsDir,self.sets[self.selectedSet]),fileName)
@@ -887,6 +927,11 @@ class MyWindow(Gtk.Window):
         box_outer = Gtk.HBox(homogeneous=False, spacing=20)
         self.add(box_outer)
 
+        self.leftPanel = Gtk.Stack()
+        self.leftPanel.set_transition_type(Gtk.StackTransitionType.SLIDE_LEFT_RIGHT)
+        self.leftPanel.set_transition_duration(1000)
+
+
         # set section
         box_setSection = Gtk.VBox(homogeneous=False, spacing=6)
         #   set list dir selection
@@ -933,15 +978,46 @@ class MyWindow(Gtk.Window):
         self.newSetBtn.connect("clicked",self.createNewSet)
         midiBtn = Gtk.Button("MIDI settings")
         midiBtn.connect("clicked",self.midiDialog)
-        #midiDevBtn = Gtk.Button("MIDI devices")
-        #midiDevBtn.connect("clicked",self.midiDialog)
         btnBox = Gtk.HBox()
         btnBox.pack_start(self.newSetBtn,True,True,0)
         btnBox.pack_start(midiBtn,True,True,0)
-        #btnBox.pack_start(midiDevBtn,True,True,0)
         box_setSection.pack_start(btnBox,False,True,0)
 
-        box_outer.pack_start(box_setSection,True,True,0)
+        box_outer.pack_start(self.leftPanel,True,True,0)
+        self.leftPanel.add_named(box_setSection,"sets")
+        self.leftPanel.set_visible_child_name("sets")
+
+        # multiple set listDir
+
+        box_multiSection = Gtk.VBox(homogeneous=False, spacing=6)
+
+        self.multiSetLabel = Gtk.Label()
+        backBtn = Gtk.Button.new_with_label("< Back")
+        backBtn.connect("clicked", self.backToSetList)
+        multiHeadLayout = Gtk.HBox(homogeneous=False, spacing=3)
+        multiHeadLayout.pack_start(backBtn,True, True, 0)
+        multiHeadLayout.pack_start(self.multiSetLabel,False, True, 0)
+
+        box_multiSection.pack_start(multiHeadLayout,True, True, 0)
+
+        self.multiListStore = Gtk.ListStore(int,str)
+        self.multiList = Gtk.TreeView(self.multiListStore)
+        self.multiList.append_column(Gtk.TreeViewColumn("#",Gtk.CellRendererText(),text=0))
+        col = Gtk.TreeViewColumn("Sets",Gtk.CellRendererText(),text=1)
+        col.set_expand(True)
+        self.multiList.append_column(col)
+
+        self.multiList.connect("cursor-changed",self.selectSubset)
+
+        box_multiSection.pack_start(self.multiList,True, True, 0)
+
+        newSubsetBtn = Gtk.Button("+ New Subset")
+        newSubsetBtn.connect("clicked",self.createNewSubset)
+        box_multiSection.pack_start(newSubsetBtn,False,True,0)
+
+        self.leftPanel.add_named(box_multiSection,"multi")
+
+
 
         # midi list store
 
