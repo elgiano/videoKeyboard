@@ -931,14 +931,14 @@ class MyWindow(Gtk.Window):
 
         self.newSetBtn = Gtk.Button("+ New Set")
         self.newSetBtn.connect("clicked",self.createNewSet)
-        midiBtn = Gtk.Button("MIDI mappings")
-        midiBtn.connect("clicked",self.midiMappingDialog)
-        midiDevBtn = Gtk.Button("MIDI devices")
-        midiDevBtn.connect("clicked",self.midiPortDialog)
+        midiBtn = Gtk.Button("MIDI settings")
+        midiBtn.connect("clicked",self.midiDialog)
+        #midiDevBtn = Gtk.Button("MIDI devices")
+        #midiDevBtn.connect("clicked",self.midiDialog)
         btnBox = Gtk.HBox()
         btnBox.pack_start(self.newSetBtn,True,True,0)
         btnBox.pack_start(midiBtn,True,True,0)
-        btnBox.pack_start(midiDevBtn,True,True,0)
+        #btnBox.pack_start(midiDevBtn,True,True,0)
         box_setSection.pack_start(btnBox,False,True,0)
 
         box_outer.pack_start(box_setSection,True,True,0)
@@ -1257,12 +1257,15 @@ class MyWindow(Gtk.Window):
 
     def loadMidiConf(self):
         self.midiListStore.clear()
+        self.midi_ports = []
         if self.midi_mappings:
             for funcName in self.midi_mappings:
                 if funcName != "midi_ports":
                     code = self.midi_mappings[funcName]
                     prFuncName = funcName.replace("_"," ").title()
                     self.midiListStore.append([funcName,prFuncName,code])
+                else:
+                    self.midi_ports = [int(i) for i in self.midi_mappings["midi_ports"]]
 
     def midiMappingEdited(self,renderer,path,newValue):
         # update model
@@ -1274,6 +1277,75 @@ class MyWindow(Gtk.Window):
             self.changeMidiPort(int(newValue))
 
         self.midiLearnField = None
+
+    def midiDialog(self,otherArg):
+        dialog = Gtk.Dialog("MIDI Mapping",self)
+        dialog.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
+
+        self.loadMidiConf()
+
+        hbox = Gtk.HBox(homogeneous=False,spacing=10)
+
+        # DEVICES
+        deviceList = rtmidi.MidiIn(rtmidi.API_UNSPECIFIED).get_ports()
+        availableListStore = Gtk.ListStore(int,str)
+        availableList = Gtk.TreeView(availableListStore)
+        availableList.get_selection().set_mode(Gtk.SelectionMode.MULTIPLE)
+        availableList.append_column(Gtk.TreeViewColumn("Select Devices",Gtk.CellRendererText(),text=1))
+
+        for (i,devName) in enumerate(deviceList):
+            availableListStore.append([i,devName])
+            if i in self.midi_ports:
+                availableList.get_selection().select_path(i)
+
+
+        hbox.pack_start(availableList,True,True,0)
+
+
+        # CONTROLS
+        midiListScroll = Gtk.ScrolledWindow()
+        midiListScroll.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        midiList =  Gtk.TreeView(self.midiListStore)
+        col = Gtk.TreeViewColumn("Function",Gtk.CellRendererText(),text=1)
+        col.set_sort_column_id(1)
+        midiList.append_column(col)
+        midiSpin = Gtk.CellRendererSpin()
+        midiSpin.set_property("editable",True)
+        midiSpin.set_property("adjustment", Gtk.Adjustment(0,-1,127,1,1,1))
+        midiSpin.connect("edited",self.midiMappingEdited)
+        midiSpin.connect("editing-started",self.midiLearn)
+        col = Gtk.TreeViewColumn("MIDI",midiSpin,text=2)
+        col.set_sort_column_id(2)
+        midiList.append_column(col)
+
+        midiListScroll.add(midiList)
+
+        midiListScroll.set_size_request(400,dialog.get_screen().get_height()/2)
+
+        hbox.pack_start(midiListScroll,True,True,0)
+        dialog.vbox.pack_start(hbox,True,True,0)
+
+        # BUTTONS
+        dialog.add_button(Gtk.STOCK_CANCEL,Gtk.ResponseType.CANCEL)
+        dialog.add_button(Gtk.STOCK_SAVE,Gtk.ResponseType.OK)
+        dialog.show_all()
+        response = dialog.run()
+        # RESPONSE
+
+        if response == Gtk.ResponseType.OK:
+            # SAVE DEVICES
+            (model,selected) = availableList.get_selection().get_selected_rows()
+            self.midi_ports = [model[sel][0] for sel in selected]
+            self.midi_mappings["midi_ports"] = ",".join([str(p) for p in self.midi_ports])
+            self.connectToMidiPorts(self.midi_ports)
+            # SAVE CONTROLS
+            if self.findUnsavedMappings():
+                self.writeConfig(-1)
+        elif response == Gtk.ResponseType.CANCEL:
+            print("Save canceled")
+
+        dialog.destroy()
+
 
     # MIDI
 
@@ -1300,7 +1372,7 @@ class MyWindow(Gtk.Window):
             midi_in.set_callback(self.midiCallback)
             self.midi_inputs.append(midi_in)
 
-    def midiPortDialog(self,otherArg):
+    '''def midiPortDialog(self,otherArg):
        dialog = Gtk.Dialog("Choose MIDI devices",self)
 
        deviceList = rtmidi.MidiIn(rtmidi.API_UNSPECIFIED).get_ports()
@@ -1329,7 +1401,8 @@ class MyWindow(Gtk.Window):
        elif response == Gtk.ResponseType.CANCEL:
            print("Save canceled")
 
-       dialog.destroy()
+       dialog.destroy()'''
+
 
     # MIDI LEARN
 
