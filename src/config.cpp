@@ -83,6 +83,7 @@ std::vector<SourceGroup> Config::findConfig(){
         bool thisIsCapture = false;
         bool thisIsRandom = false;
         bool thisIsMultiple = false;
+        bool thisAutoplay = false;
 
         string thisSrc = "";
         //type, source, layout
@@ -115,12 +116,17 @@ std::vector<SourceGroup> Config::findConfig(){
             thisRandSize = Settings::getInt("sources/"+std::to_string(thisFolder)+"/size");
         }
 
+        if(Settings::get().exists("sources/"+std::to_string(thisFolder)+"/autoplay")){
+            thisAutoplay = Settings::getInt("sources/"+std::to_string(thisFolder)+"/autoplay")>0;
+        }
+
         // register source group
         SourceGroup thisSourceGroup{
           (short)(thisIsCapture?1:thisIsRandom?2:thisIsMultiple?3:0),
           thisLayout,
           thisDeviceID,
           thisRandSize,
+          thisAutoplay,
           (thisIsMultiple || thisIsCapture) ? thisSrc : ofFilePath::join(enclosingDir,thisSrc)
         };
         sourceGroups[thisFolder] = thisSourceGroup;
@@ -154,9 +160,9 @@ std::vector<SourceGroup> Config::findConfig(){
         midiMappings[k] = value;
         cout << k << ": " << value << endl;
       }
-      
+
     }
-      
+
       // midi config values: lowest note and ports
       if(Settings::get().exists(prefix+"first_midinote")){
           first_midinote = Settings::getInt(prefix+"first_midinote");

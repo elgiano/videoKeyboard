@@ -82,16 +82,27 @@ void ofApp::loadSources(std::vector<SourceGroup> sourceGroups){
     cout << src.deviceID << endl;
     cout << src.size << endl;*/
 
+    int old_videos = n_videos;
+
     switch(src.type){
       case 0: loadSourceGroup(src.src,src.layout);break;
       case 1: loadCaptureGroup(src.deviceID,src.layout);break;
       case 2: loadRandomGroup(src.src,src.size);break;
       case 3: loadMultipleGroup(src.src);break;
     }
+    if(src.autoplay){
+      registerAutoplayGroupForSet(max(0,loadedSets-1),old_videos-1,n_videos-old_videos);
+    }
   }
   if(old_captures<n_captures){
     initCapture();
   }
+}
+
+void ofApp::registerAutoplayGroupForSet(int set_n,int first_video, int tot_videos){
+  std::array<int,2> autoplay;autoplay[0] = first_video;autoplay[1] = tot_videos;
+  autoplayGroupsForSet[set_n].push_back(autoplay);
+  cout << "autoplay registered: set" << set_n << " from" << first_video << " for " << tot_videos << endl;
 }
 
 void ofApp::initVideoVariables(int key){
@@ -137,7 +148,7 @@ void ofApp::storeSetAvgRms(int set_n){
 }
 void ofApp::storeGlobalAvgRms(){
     float avgRms = 0;
-    for(unsigned int i=0;i<loadedSets;i++){
+    for(int i=0;i<loadedSets;i++){
         avgRms += pow(setAvgRms[i],2);
     }
     avgRms = pow(avgRms,-2)/(loadedSets);
@@ -234,6 +245,25 @@ void ofApp::loadRandomGroup(string path,int size){
     n_videos++;
   }
 
+}
+
+void ofApp::loadSet(int set_n){
+
+  for(auto autoplay : autoplayGroupsForSet[activeSet]){
+    cout << "autostop " << endl;
+    for(int i=0;i<autoplay[1];i++){
+      stopVideo(autoplay[0]+1);
+    }
+  }
+
+  activeSet = set_n%loadedSets;
+
+  for(auto autoplay : autoplayGroupsForSet[activeSet]){
+    cout << "autoplay " << endl;
+    for(int i=0;i<autoplay[1];i++){
+      playVideo(autoplay[0]+1,1.0);
+    }
+  }
 }
 
 // ### DRAW ###

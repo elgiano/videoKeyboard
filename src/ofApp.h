@@ -106,6 +106,8 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		void loadConfigNew(string path);
 		void loadMidiMappings();
 		void loadSources(std::vector<SourceGroup>);
+		void registerAutoplayGroupForSet(int set_n,int first_video, int tot_videos);
+		void loadSet(int set_n);
 		void loadMultipleGroup(string path);
         int setNumberFromKey(int key);
 		void loadSourceGroup(string path, int layout);
@@ -201,6 +203,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		int setStart[MAX_SETS] = {0};
     float setAvgRms[MAX_SETS] = {1};
 		float globalAvgRms = 1;
+		std::vector<std::array<int,2>> autoplayGroupsForSet[MAX_SETS];
 
 
 		int midiMaxVal;

@@ -8,6 +8,7 @@ struct SourceGroup {
   short layout;
   short deviceID; // for capture
   int size; // random groups need a size
+  bool autoplay;
   string src; // for folder and random groups
   //SourceGroup() : type(0),layout(0),deviceID(0),size(0),src("") {};
 };

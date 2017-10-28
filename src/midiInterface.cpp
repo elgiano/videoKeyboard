@@ -230,27 +230,33 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
                   cout << "layout " << ofToString(layout)<< endl;
                   break;
               case MidiCommand::switch_to_set_0:
-                  activeSet = 0;
+                  //activeSet = 0;
+                  loadSet(0);
                   cout << "activeSet " << ofToString(activeSet)<< endl;
                   break;
               case MidiCommand::switch_to_set_1:
-                  activeSet = 1%loadedSets;
+                  //activeSet = 1%loadedSets;
+                  loadSet(1);
                   cout << "activeSet " << ofToString(activeSet)<< endl;
                   break;
               case MidiCommand::switch_to_set_2:
-                  activeSet = 2%loadedSets;
+                  //activeSet = 2%loadedSets;
+                  loadSet(2);
                   cout << "activeSet " << ofToString(activeSet)<< endl;
                   break;
               case MidiCommand::switch_to_set_3:
-                  activeSet = 3%loadedSets;
+                  //activeSet = 3%loadedSets;
+                  loadSet(3);
                   cout << "activeSet " << ofToString(activeSet)<< endl;
                   break;
               case MidiCommand::switch_to_set_4:
-                  activeSet = 4%loadedSets;
+                  //activeSet = 4%loadedSets;
+                  loadSet(4);
                   cout << "activeSet " << ofToString(activeSet)<< endl;
                   break;
               case MidiCommand::switch_to_set_5:
-                  activeSet = 5%loadedSets;
+                  //activeSet = 5%loadedSets;
+                  loadSet(5);
                   cout << "activeSet " << ofToString(activeSet)<< endl;
                   break;
               case MidiCommand::ribattutoSpeed:
