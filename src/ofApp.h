@@ -36,6 +36,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		int sustain_mode;
 		int brightness;
         int brightness_opacity;
+		int black_screen=0;
 
 		bool blending_multiply;
 		bool blending_add=false;
@@ -112,6 +113,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		void loadRandomGroup(string path,int size);
 		std::map<string,float> readRms(string path);
         void storeSetAvgRms(int set_n);
+				void storeGlobalAvgRms();
 		void setVideoVolume(int key,float vol);
 		void soundFades(int i);
 
@@ -175,7 +177,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		float fo_start[MAX_VIDEOS];
         float fi_start[MAX_VIDEOS];
 
-        float sound_fadeTime = 0.1;
+        float sound_fadeTime = 0.01;
 
 		float tapTempo[MAX_VIDEOS];
 		float tapSpeed[MAX_VIDEOS];
@@ -198,6 +200,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		int loadedSets = 0;
 		int setStart[MAX_SETS] = {0};
     float setAvgRms[MAX_SETS] = {1};
+		float globalAvgRms = 1;
 
 
 		int midiMaxVal;

@@ -1,4 +1,6 @@
 #include "ofApp.h"
+#include <stdexcept>
+
 
 void ofApp::setupMidi(){
 
@@ -46,7 +48,14 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
       midiMaxVal = 16383; // set maxVal to pitchBend
     case MIDI_CONTROL_CHANGE:
           //cout << ofToString(msg.control) << endl;
-          switch(settings.midiMapByValue[msg.control]){
+          auto command = MidiCommand::none;
+          try{
+            command = settings.midiMapByValue.at(msg.control);
+          }catch(const std::out_of_range& e){
+            cout << "CC" << msg.control << " not mapped!" << endl;
+            break;
+          }
+          switch(command){
             case MidiCommand::fade_in:
               fade_in = (float)msg.value/midiMaxVal*3;
               cout << "fade_in:" << fade_in << endl;
@@ -253,19 +262,24 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
                   cout << "panic " << endl;
                   break;
               case MidiCommand::sound_fade_time:
-                  sound_fadeTime = pow((float)msg.value/midiMaxVal,10);
+                  sound_fadeTime = pow((float)msg.value/midiMaxVal,5);
                   cout << "sound_fadeTime:" << sound_fadeTime << endl;
                   break;
               case MidiCommand::rms_correction_pct:
                   rms_correction_pct = (float)msg.value/midiMaxVal;
                   cout << "rms correction %:" << rms_correction_pct << endl;
                   break;
+              case MidiCommand::black_screen:
+                  black_screen = (int)round((1-pow(1-(float)msg.value/midiMaxVal,2))*255);
+                  //black_screen = (int)round((1-pow(10,-1*(float)msg.value/midiMaxVal))*255);
+                  cout << "black_screen:" << black_screen << endl;
+                  break;
           }
       midiMaxVal = 127; // reset maxVal to control
       break;
-    default:
+    /*default:
       cout << ofToString(msg.deltatime) << " ) " << msg.getStatusString(msg.status) << " " <<ofToString(((int)msg.pitch)-21) << " " << ofToString(msg.control) << " " << ofToString(msg.value) << endl;
-      break;
+      break;*/
     };
 
 }

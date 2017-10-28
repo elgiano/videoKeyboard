@@ -135,6 +135,15 @@ void ofApp::storeSetAvgRms(int set_n){
     setAvgRms[set_n] = avgRms;
     cout << "set " << set_n << " avgRms " << avgRms << endl;
 }
+void ofApp::storeGlobalAvgRms(){
+    float avgRms = 0;
+    for(unsigned int i=0;i<loadedSets;i++){
+        avgRms += pow(setAvgRms[i],2);
+    }
+    avgRms = pow(avgRms,-2)/(loadedSets);
+    globalAvgRms = avgRms;
+    cout << "global avgRms: " << avgRms << endl;
+}
 
 
 void ofApp::loadMultipleGroup(string path){
@@ -157,9 +166,9 @@ void ofApp::loadMultipleGroup(string path){
         loadSources(settings.loadConfig(thisPath.getPath(0)));
       };
       storeSetAvgRms(loadedSets-1);
-
     }
   }
+  storeGlobalAvgRms();
 }
 
 void ofApp::loadSourceGroup(string path,int layout){
@@ -396,7 +405,7 @@ void ofApp::drawVideoInLayout(int movieN){
                            w*((1-(screenW/screenH))/2),0,
                            w*(screenW/screenH),h);
 
-          
+
           if(blending_multiply){drawBrightnessLayer(screenW/2*(layoutPos%2),
                                                     (screenH/2*(layoutPos/2%2))+(screenH/2-(screenW/2*h/w))/2,
                                                     screenW/2, screenH/2);
@@ -450,6 +459,10 @@ void ofApp::draw(){
       drawVideoInLayout(i);
 
     }
+  }
+  if(black_screen>0){
+    ofSetColor(0,0,0,black_screen);
+    ofDrawRectangle(0,0,screenW,screenH);
   }
 }
 
@@ -574,6 +587,7 @@ void ofApp::soundFades(int i){
 void ofApp::setVideoVolume(int key, float vol){
   if(rms_mode){
       float correction = setAvgRms[setNumberFromKey(key)]/videoRms[key];
+      correction = globalAvgRms/videoRms[key];
       correction = 1+((correction-1)*rms_correction_pct);
     movie[key].setVolume(vol*volume*videoVolume[key]*correction);
       /*cout << "#"<<key<< " volume " << vol*volume*videoVolume[key]*setAvgRms[setNumberFromKey(key)]/videoRms[key] <<  " correction " << videoRms[key] << endl;

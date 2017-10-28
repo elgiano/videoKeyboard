@@ -8,7 +8,7 @@ import os,sys
 import subprocess
 
 def analyzeAudio(path):
-    
+
     #demux
     path = path.replace(" ","\ ")
     if not os.path.isfile(path+".audio.wav"):
@@ -18,8 +18,8 @@ def analyzeAudio(path):
 
     # extract RMS volume
     lines = proc.stdout.splitlines();
-    if len(lines)>8:
-        out = lines[8].split(b":")[-1]
+    if len(lines)>3:
+        out = lines[3].split(b":")[-1]
         out = str(float(out))
         # clean_up
         os.system("rm "+path+".audio.wav")

@@ -13,6 +13,7 @@ struct SourceGroup {
 };
 
 enum class MidiCommand {
+  none,
   fade_in,
   fade_out,
   global_speed,
@@ -55,7 +56,8 @@ enum class MidiCommand {
         panic,
         sound_fade_time,
         rms_correction_pct,
-        blending_add_switch
+        blending_add_switch,
+        black_screen
 };
 
 
@@ -127,6 +129,8 @@ class Config {
        {"sound_fade_time", MidiCommand::sound_fade_time },
        {"rms_correction_pct", MidiCommand::rms_correction_pct },
        {"blending_add_switch", MidiCommand::blending_add_switch},
+       {"black_screen", MidiCommand::black_screen},
+
       };
 
     std::map<string, int> midiMappings;
