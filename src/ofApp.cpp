@@ -549,7 +549,7 @@ void ofApp::update(){
                   }else{
                       movie[i].setPosition(startPos[i]);
                   }
-                  setVideoVolume(i, 0);
+                  //setVideoVolume(i, 0);
                   movie[i].play();
                   continue;
                }
@@ -656,7 +656,7 @@ void ofApp::playVideo(int key, float vel){
     // update dynamics and stop fade_out
       dyn[key] = vel;
       videoVolume[key] = dynIsVolume ? vel : 1.0;
-      setVideoVolume(key,1.0);
+      //setVideoVolume(key,1.0);
       fo_start[key] = 0;
       fi_start[key] = ofGetElapsedTimef();
 

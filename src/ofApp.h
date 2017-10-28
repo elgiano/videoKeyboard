@@ -231,6 +231,7 @@ public:
   }
 
   void threadedFunction() {
+		ctrl->setVideoVolume(movieN,0);
     while(isThreadRunning()){
       ctrl->soundFades(movieN);
       std::this_thread::sleep_for(std::chrono::milliseconds(deltams));
