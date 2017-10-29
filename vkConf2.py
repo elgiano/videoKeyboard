@@ -1,8 +1,8 @@
 #!/bin/python
 #/home/giano/projects/soren/videoKeyboardHap/bin/sets
 
-from os import listdir, mkdir,rmdir, symlink, remove, rename
-from os.path import isdir, isfile, join, getsize, abspath, isabs,realpath, basename
+from os import listdir, mkdir,rmdir, symlink, remove, rename, system
+from os.path import isdir, isfile, join, getsize, abspath, isabs,realpath, basename,splitext
 from shutil import copytree
 import gi
 gi.require_version('Gtk', '3.0')
@@ -13,6 +13,51 @@ from sys import exc_info
 import re
 from rtmidi.midiutil import open_midiinput
 import rtmidi
+
+
+from multiprocessing.dummy import Pool as ThreadPool
+import subprocess
+
+def analyzeAudio(path):
+
+    #demux
+    path = path.replace(" ","\ ")
+    if not isfile(path+".audio.wav"):
+        system("ffmpeg -i "+path+" -map 0:a "+path+".audio.wav")
+    #analyze volume
+    proc = subprocess.run(["sox",path+".audio.wav", "-n","stat"], stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+    # extract RMS (PEAK) volume
+    lines = proc.stdout.splitlines();
+    if len(lines)>3:
+        out = lines[3].split(b":")[-1]
+        out = str(float(out))
+        # clean_up
+        system("rm "+path+".audio.wav")
+        return((path,out))
+
+def analyzeGroupAudio(thisPath):
+    print(thisPath)
+
+    allowExt = ".mov"
+
+    dirs = listdir( thisPath )
+    dirs = [join(thisPath,f) for f in dirs if splitext(f)[1] == allowExt]
+    if len(dirs) == 0 :
+        print("Can't find any file! (ext: "+allowExt+")");
+        return
+    else:
+        pool = ThreadPool(4)
+        results = pool.map(analyzeAudio, dirs)
+        pool.close()
+        pool.join()
+
+        wf = open(join(thisPath,"rms"),"w+")
+
+        for pair in results:
+            if pair != None:
+                print(" ".join([basename(pair[0]),pair[1]]),file=wf)
+        wf.close()
+
 
 class LayoutSelectorGroup(Gtk.HBox):
 
@@ -698,7 +743,10 @@ class MyWindow(Gtk.Window):
                     else:
                         size = len([f for f in listdir(join(path,group["src"])) if isfile(join(join(path,group["src"]),f))])
 
-            self.groupsListStore.append([i,str(group["src"]),capture,size,group["layout"],0,0,"",group["type"]=="random"])
+            autoplay = False
+            if "autoplay" in group:
+                autoplay = group["autoplay"]>0
+            self.groupsListStore.append([i,str(group["src"]),capture,size,group["layout"],0,0,"",group["type"]=="random",autoplay])
 
         self.updateGroupsMIDI()
 
@@ -827,6 +875,11 @@ class MyWindow(Gtk.Window):
                             newConf = open(join(self.setsDir,txt.get_text(),"config.json"),"w+")
                             newConf.write('{"sources": {"0": {"src": ".", "captureID": 0, "type": "multiple"}}, "layouts": {}}');
                             newConf.close()
+                        else:
+                            newConf = open(join(self.setsDir,txt.get_text(),"config.json"),"w+")
+                            newConf.write('{"sources": {}, "layouts": {}}');
+                            newConf.close()
+
                         self.selectedSet = None
                         self.fillSetList()
                         done=True
@@ -867,19 +920,56 @@ class MyWindow(Gtk.Window):
         self.groupsListStore.remove(self.groupsListStore.get_iter(self.selectedGroup))
 
 
+    def registerExistingFolders(self,args):
+        # list current set dir
+        folders = [f for f in listdir(self.selectedSetPath()) if isdir(join(self.selectedSetPath(),f))]
+        # remove already registered folders
+        for srcN in self.selectedConf()['sources']:
+            if self.selectedConf()['sources'][srcN]['type']=='folder':
+                folders.remove(self.selectedConf()['sources'][srcN]['src'])
+        # show a list for selecting folders
+        dialog = Gtk.Dialog("Choose folders to import",self)
 
-    def appendGroup(self,srcType,name,captureID,layoutID):
+        foldersListStore = Gtk.ListStore(int,str)
+        for (i,fold) in enumerate(folders):
+            foldersListStore.append([i,fold])
+        foldersList = Gtk.TreeView(foldersListStore)
+        foldersList.append_column(Gtk.TreeViewColumn("Name",Gtk.CellRendererText(),text=1))
+        foldersList.get_selection().set_mode(Gtk.SelectionMode.MULTIPLE)
+        dialog.vbox.pack_start(foldersList,True,True,0)
+
+        dialog.add_button(Gtk.STOCK_CANCEL,Gtk.ResponseType.CANCEL)
+        dialog.add_button("Import",Gtk.ResponseType.OK)
+
+        dialog.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
+        dialog.show_all()
+
+        response = dialog.run()
+        if response == Gtk.ResponseType.OK:
+            (model,selected) = foldersList.get_selection().get_selected_rows()
+            folders = [model[sel][1] for sel in selected]
+            for name in folders:
+                self.appendGroup("folder",name,0,0,0)
+        elif response == Gtk.ResponseType.CANCEL:
+            print("Save canceled")
+
+        dialog.destroy()
+
+
+    def appendGroup(self,srcType,name,captureID,layoutID,autoplay):
         pos = len(self.groupsListStore)
         # add to config
         self.selectedConf()["sources"][str(pos)] = {
             "type":srcType,
             "src":name,
             "captureID":captureID,
-            "layout":layoutID
+            "layout":layoutID,
+            "autoplay":autoplay
         }
         # add to list model
-        self.groupsListStore.append([pos,name,srcType=="capture",0,layoutID,0,0,"",srcType=="random"])
+        self.groupsListStore.append([pos,name,srcType=="capture",0,layoutID,0,0,"",srcType=="random",autoplay>0])
         self.updateGroupsMIDI()
+
 
     def newGroupDialog(self,*argv):
         dialog = Gtk.Dialog("Create New Source Group",self)
@@ -918,6 +1008,9 @@ class MyWindow(Gtk.Window):
         layoutID.set_adjustment(Gtk.Adjustment(0,0,len(self.selectedConf()["layouts"]),1,1,1))
         layout.pack_start(layoutID,True,True,0)
         dialog.vbox.pack_start(layout,True,True,0)
+
+        autop = Gtk.CheckButton("Autoplay")
+        dialog.vbox.pack_start(autop,True,True,0)
 
         dialog.add_button(Gtk.STOCK_CANCEL,Gtk.ResponseType.CANCEL)
         dialog.add_button(Gtk.STOCK_OK,Gtk.ResponseType.OK)
@@ -959,7 +1052,7 @@ class MyWindow(Gtk.Window):
                     srcType = "capture"
 
                 # create new group
-                self.appendGroup(srcType,folderEntry.get_text(),int(captureID.get_value()),int(layoutID.get_value()))
+                self.appendGroup(srcType,folderEntry.get_text(),int(captureID.get_value()),int(layoutID.get_value()),autop.get_active())
 
             elif response == Gtk.ResponseType.CANCEL:
                 print("Group creation canceled")
@@ -1188,7 +1281,7 @@ class MyWindow(Gtk.Window):
 
         box_groupsLists = Gtk.HBox(homogeneous=True, spacing=10)
         box_groupListAndBtns = Gtk.VBox(homogeneous=False, spacing=10)
-        self.groupsListStore = Gtk.ListStore(int,str,bool,int,int,int,int,str,bool)
+        self.groupsListStore = Gtk.ListStore(int,str,bool,int,int,int,int,str,bool,bool)
         self.groupsList = Gtk.TreeView(self.groupsListStore)
         self.groupsList.set_reorderable(True)
         self.groupsListStore.connect("row-deleted",self.groupsReordered)
@@ -1210,6 +1303,10 @@ class MyWindow(Gtk.Window):
         self.groupLayoutCol.connect("edited", self.setGroupLayout)
         self.groupsList.append_column(Gtk.TreeViewColumn("Layout",self.groupLayoutCol ,text=4))
 
+        apToggle = Gtk.CellRendererToggle()
+        apToggle.connect("toggled",self.groupAutoplayToggled)
+        self.groupsList.append_column(Gtk.TreeViewColumn("Autoplay",apToggle,active=9))
+
         renderer = Gtk.CellRendererText()
         renderer.connect("edited", self.randomGroupSizeChanged)
         self.groupsList.append_column(Gtk.TreeViewColumn("Videos",renderer,text=3,editable=8))
@@ -1226,9 +1323,17 @@ class MyWindow(Gtk.Window):
 
         box_groupListAndBtns.pack_start(self.groupsList,True, True, 0)
         # new groups btn
+        box_btnh = Gtk.HBox();
         btn = Gtk.Button("+ Create New Group")
         btn.connect("clicked",self.newGroupDialog)
-        box_groupListAndBtns.pack_start(btn,False,True,0)
+        box_btnh.pack_start(btn,True,True,0)
+        btn = Gtk.Button("Register Existing Folders")
+        btn.connect("clicked",self.registerExistingFolders)
+        box_btnh.pack_start(btn,True,True,0)
+        btn = Gtk.Button("Analyze Volume")
+        btn.connect("clicked",self.analyzeSetVolume)
+        box_btnh.pack_start(btn,True,True,0)
+        box_groupListAndBtns.pack_start(box_btnh,False,True,0)
 
         box_groupsLists.pack_start(box_groupListAndBtns,True, True, 0)
 
@@ -1323,6 +1428,11 @@ class MyWindow(Gtk.Window):
             self.selectSetDir()
 
 
+    def analyzeSetVolume(self,args):
+        folders = [self.selectedConf()['sources'][f]['src'] for f in self.selectedConf()['sources'] if self.selectedConf()['sources'][f]['type']=='folder']
+        for f in folders:
+            analyzeGroupAudio(join(self.selectedSetPath(),f))
+
     # lists interaction
     def setRandomnessToggled(self,widget,path):
         if(self.configs[int(path)]!=None):
@@ -1345,6 +1455,14 @@ class MyWindow(Gtk.Window):
         self.groupsListStore[path][3] = int(value)
         self.selectedSourceConf()["size"] = int(value)
 
+
+    def groupAutoplayToggled(self,wi,path):
+        self.selectedGroup = int(path)
+        self.groupsListStore[path][9] = not self.groupsListStore[path][9]
+        if self.groupsListStore[path][9]:
+            self.selectedSourceConf()["autoplay"] = 1
+        else:
+            self.selectedSourceConf()["autoplay"] = 0
 
     def groupCaptureToggled(self,wi,path):
         self.selectedGroup = int(path)

@@ -25,28 +25,28 @@ def analyzeAudio(path):
         os.system("rm "+path+".audio.wav")
         return((path,out))
 
+def analyzeGroup(path):
 
-allowExt = ".mov"
-if len(sys.argv)>2:
-    allowExt = sys.argv[2]
-    if allowExt[0]!=".":
-        allowExt = "."+allowExt
+    allowExt = ".mov"
+    '''if len(sys.argv)>2:
+        allowExt = sys.argv[2]
+        if allowExt[0]!=".":
+            allowExt = "."+allowExt'''
 
-dirs = os.listdir( sys.argv[1] )
+    dirs = os.listdir( sys.argv[1] )
+    dirs = [os.path.join(sys.argv[1],f) for f in dirs if os.path.splitext(f)[1] == allowExt]
+    if len(dirs) == 0 :
+        print("Can't find any file! (ext: "+allowExt+")");
+        return
+    else:
+        pool = ThreadPool(4)
+        results = pool.map(analyzeAudio, dirs)
+        pool.close()
+        pool.join()
 
-dirs = [os.path.join(sys.argv[1],f) for f in dirs if os.path.splitext(f)[1] == allowExt]
+        wf = open(os.path.join(sys.argv[1],"rms"),"w+")
 
-if len(dirs) == 0 :
-    print("Can't find any file! (ext: "+allowExt+")");
-else:
-    pool = ThreadPool(4)
-    results = pool.map(analyzeAudio, dirs)
-    pool.close()
-    pool.join()
-
-    wf = open(os.path.join(sys.argv[1],"rms"),"w+")
-
-    for pair in results:
-        if pair != None:
-            print(" ".join([os.path.basename(pair[0]),pair[1]]),file=wf)
-    wf.close()
+        for pair in results:
+            if pair != None:
+                print(" ".join([os.path.basename(pair[0]),pair[1]]),file=wf)
+        wf.close()
