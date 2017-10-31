@@ -37,3 +37,8 @@ Makefile
 Makefile
 *.make
 .DS_Store
+.DS_Store
+addons.make
+*.make
+Makefile
+midi_mappings.json

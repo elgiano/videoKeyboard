@@ -492,6 +492,7 @@ void ofApp::draw(){
   }
   if(black_screen>0){
     ofSetColor(0,0,0,black_screen);
+    ofEnableAlphaBlending();
     ofDrawRectangle(0,0,screenW,screenH);
   }
 }
