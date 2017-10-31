@@ -107,17 +107,24 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
                   break;
               }
               break;
+              case MidiCommand::sostenuto_freeze:
+                  if(!sostenutoFreezeInhibit){
+                      sostenutoFreeze = (  msg.value)/midiMaxVal;
+                      if(sostenutoFreeze==0){stopSostenutoFreeze();}
+                      if(sostenutoFreeze==1){startSostenutoFreeze();}
+                      break;
+                  }
+                  // if inhibit: dont break, go to sostenuto
       			case MidiCommand::sostenuto:
-              cout << "sostenuto" << endl;
-              sostenuto = (msg.value)/midiMaxVal;
-              if(sostenuto==0){stopSostenuto();}
-              if(sostenuto==1){startSostenuto();}
+                  cout << "sostenuto" << endl;
+                  sostenuto = (msg.value)/midiMaxVal;
+                  if(sostenuto==0){stopSostenuto();}
+                  if(sostenuto==1){startSostenuto();}
               break;
-      			case MidiCommand::sostenuto_freeze:
-              sostenutoFreeze = (  msg.value)/midiMaxVal;
-              if(sostenutoFreeze==0){stopSostenutoFreeze();}
-              if(sostenutoFreeze==1){startSostenutoFreeze();}
-              break;
+      			
+              case MidiCommand::sostenuto_freeze_inhibit:
+                  sostenutoFreezeInhibit = msg.value!=0;
+                  break;
       			case MidiCommand::dynamics_switch:
                   isDynamic = msg.value!=0;
               ofLogVerbose("dynamics_switch: " + ofToString(isDynamic));
@@ -182,7 +189,7 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
                       cout << "dynIsVolume "<< dynIsVolume << endl;
                     break;
               case MidiCommand::rms_normalize:
-                    rms_mode = msg.value!=0;
+                    //rms_mode = msg.value!=0;
                     cout << "rms_mode "<< rms_mode << endl;
                   break;
               case MidiCommand::stutter_mode:
@@ -219,6 +226,10 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
                   break;
               case MidiCommand::switch_to_layout_3:
                   layout = 3;
+                  cout << "layout " << ofToString(layout)<< endl;
+                  break;
+              case MidiCommand::switch_to_layout_3alt:
+                  layout = -3;
                   cout << "layout " << ofToString(layout)<< endl;
                   break;
               case MidiCommand::switch_to_layout_4:
@@ -273,6 +284,7 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
                   break;
               case MidiCommand::rms_correction_pct:
                   rms_correction_pct = (float)msg.value/midiMaxVal;
+                  rms_mode = msg.value>0;
                   cout << "rms correction %:" << rms_correction_pct << endl;
                   break;
               case MidiCommand::black_screen:

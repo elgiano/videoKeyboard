@@ -330,12 +330,12 @@ void ofApp::drawVideoInLayout(int movieN){
   if(blending_multiply){
 
     ofEnableBlendMode(OF_BLENDMODE_MULTIPLY);
-    videoColor.set(255,255,255,255*fi_alpha*fo_alpha*thisDyn);
+    videoColor.set(255,255,255,255*fi_alpha*fo_alpha*thisDyn*(1.0-((float)brightness/255.0)));
 
   }else if(blending_add){
 
     ofEnableBlendMode(OF_BLENDMODE_ADD);
-    videoColor.set(255-brightness,255-brightness,255-brightness,255*fi_alpha*fo_alpha*thisDyn);
+    videoColor.set(255-brightness,255-brightness,255-brightness,255*fi_alpha*fo_alpha*thisDyn*(1.0-((float)brightness/255.0)));
 
   }else{
     // alpha blending:
@@ -367,7 +367,7 @@ void ofApp::drawVideoInLayout(int movieN){
               drawWhiteBg(0,(screenH-(screenW*h/w))/2, screenW, screenW*h/w);
           }
       thisTexture.draw(0,(screenH-(screenW*h/w))/2, screenW, screenW*h/w);
-          if(blending_multiply){drawBrightnessLayer(0,(screenH-(screenW*h/w))/2, screenW, screenW*h/w);}
+          //if(blending_multiply){drawBrightnessLayer(0,(screenH-(screenW*h/w))/2, screenW, screenW*h/w);}
 
       break;
     case 1:
@@ -377,7 +377,7 @@ void ofApp::drawVideoInLayout(int movieN){
               drawWhiteBg(screenW/2*layoutPos,0,screenW/2,screenH);
           }
      thisTexture.drawSubsection(screenW/2*layoutPos,0,screenW/2,screenH,((screenH*w/h)-(screenW/2))*w/screenW/2,0,w*(1-((screenH*w/h)-(screenW/2))/screenW),h);
-          if(blending_multiply){drawBrightnessLayer(screenW/2*layoutPos,0,screenW/2,screenH);}
+         // if(blending_multiply){drawBrightnessLayer(screenW/2*layoutPos,0,screenW/2,screenH);}
 
       break;
     case 2:
@@ -387,7 +387,7 @@ void ofApp::drawVideoInLayout(int movieN){
               drawWhiteBg(0,screenH/2*layoutPos,screenW,screenH/2);
           }
       thisTexture.drawSubsection(0,screenH/2*layoutPos,screenW,screenH/2,0,((screenW*h/w)-(screenH/2))*h/screenH/2,w,h*(1-((screenW*h/w)-(screenH/2))/screenH));
-      if(blending_multiply){drawBrightnessLayer(0,screenH/2*layoutPos,screenW,screenH/2);}
+     // if(blending_multiply){drawBrightnessLayer(0,screenH/2*layoutPos,screenW,screenH/2);}
 
       break;
     case 3:
@@ -405,7 +405,7 @@ void ofApp::drawVideoInLayout(int movieN){
                 drawWhiteBg(0,(layout>0?screenH/2:0),screenW,screenH/2);
             }
           thisTexture.drawSubsection(0,(layout>0?screenH/2:0),screenW,screenH/2,0,((screenW*h/w)-(screenH/2))*h/screenH/2,w,h*(1-((screenW*h/w)-(screenH/2))/screenH));
-          if(blending_multiply){drawBrightnessLayer(0,(layout>0?screenH/2:0),screenW,screenH/2);}
+         // if(blending_multiply){drawBrightnessLayer(0,(layout>0?screenH/2:0),screenW,screenH/2);}
 
         };
       break;
@@ -419,7 +419,7 @@ void ofApp::drawVideoInLayout(int movieN){
           thisTexture.drawSubsection(screenW/3*layoutPos,0,screenW/3,screenH,
                 w/3,0,w/3,h
           );
-          if(blending_multiply){drawBrightnessLayer(screenW/3*layoutPos,0,screenW/3,screenH);}
+         // if(blending_multiply){drawBrightnessLayer(screenW/3*layoutPos,0,screenW/3,screenH);}
 
           break;
     case 5:
@@ -436,10 +436,10 @@ void ofApp::drawVideoInLayout(int movieN){
                            w*(screenW/screenH),h);
 
 
-          if(blending_multiply){drawBrightnessLayer(screenW/2*(layoutPos%2),
+          /*if(blending_multiply){drawBrightnessLayer(screenW/2*(layoutPos%2),
                                                     (screenH/2*(layoutPos/2%2))+(screenH/2-(screenW/2*h/w))/2,
                                                     screenW/2, screenH/2);
-}
+}*/
 
 
   }

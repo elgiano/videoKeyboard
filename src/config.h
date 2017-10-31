@@ -44,6 +44,7 @@ enum class MidiCommand {
   switch_to_layout_1,
   switch_to_layout_2,
   switch_to_layout_3,
+  switch_to_layout_3alt,
   switch_to_layout_4,
   switch_to_layout_5,
   speed_reverse,
@@ -58,7 +59,8 @@ enum class MidiCommand {
         sound_fade_time,
         rms_correction_pct,
         blending_add_switch,
-        black_screen
+        black_screen,
+    sostenuto_freeze_inhibit
 };
 
 
@@ -116,6 +118,8 @@ class Config {
        {"switch_to_layout_1", MidiCommand::switch_to_layout_1 },
        {"switch_to_layout_2", MidiCommand::switch_to_layout_2 },
        {"switch_to_layout_3", MidiCommand::switch_to_layout_3 },
+       {"switch_to_layout_3alt", MidiCommand::switch_to_layout_3alt },
+
        {"switch_to_layout_4", MidiCommand::switch_to_layout_4 },
        {"switch_to_layout_5", MidiCommand::switch_to_layout_5 },
        {"speed_reverse",MidiCommand::speed_reverse},
@@ -131,6 +135,8 @@ class Config {
        {"rms_correction_pct", MidiCommand::rms_correction_pct },
        {"blending_add_switch", MidiCommand::blending_add_switch},
        {"black_screen", MidiCommand::black_screen},
+          {"sostenuto_freeze_inhibit", MidiCommand::sostenuto_freeze_inhibit},
+
 
       };
 

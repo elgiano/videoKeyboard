@@ -164,6 +164,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		float sustain;
         float sostenuto;
         float sostenutoFreeze;
+        bool sostenutoFreezeInhibit = false;
 
 
 		bool reset_videos[MAX_VIDEOS] = {false};
