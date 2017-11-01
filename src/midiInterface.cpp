@@ -12,6 +12,10 @@ void ofApp::setupMidi(){
         m_in.openPort(port);
         m_in.addListener(this);
         midiInputs.push_back(m_in);
+        
+        ofxMidiOut m_out;
+        m_out.openPort(port);
+        midiOutputs.push_back(m_out);
     }
 }
 
@@ -121,7 +125,7 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
                   if(sostenuto==0){stopSostenuto();}
                   if(sostenuto==1){startSostenuto();}
               break;
-      			
+
               case MidiCommand::sostenuto_freeze_inhibit:
                   sostenutoFreezeInhibit = msg.value!=0;
                   break;

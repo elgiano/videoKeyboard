@@ -140,6 +140,12 @@ class Config {
 
       };
 
+      std::map<string,std::vector<MidiCommand>> exclusiveCtrls = {
+        {"layout",{MidiCommand::switch_to_layout_0,MidiCommand::switch_to_layout_1,MidiCommand::switch_to_layout_2,MidiCommand::switch_to_layout_3,MidiCommand::switch_to_layout_4,MidiCommand::switch_to_layout_5,MidiCommand::switch_to_layout_3alt}},
+        {"set",{MidiCommand::switch_to_set_0,MidiCommand::switch_to_set_1,MidiCommand::switch_to_set_2,MidiCommand::switch_to_set_3,MidiCommand::switch_to_set_4,MidiCommand::switch_to_set_5}},
+        {"blend",{MidiCommand::blending_multiply_switch,MidiCommand::blending_add_switch}}
+      };
+      
     std::map<string, int> midiMappings;
     std::map<int,MidiCommand> midiMapByValue;
 

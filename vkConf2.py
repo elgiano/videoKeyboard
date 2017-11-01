@@ -18,6 +18,40 @@ import rtmidi
 from multiprocessing.dummy import Pool as ThreadPool
 import subprocess
 
+def fadeGroup(path):
+
+    allowExt = ".mov"
+
+    dirs = listdir( path )
+    dirs = [join(path,f) for f in dirs if splitext(f)[1] == allowExt]
+    if len(dirs) == 0 :
+        print("Can't find any file! (ext: "+allowExt+")");
+        return
+    else:
+        pool = ThreadPool(4)
+        results = pool.map(fadeAudio, dirs)
+        pool.close()
+        pool.join()
+
+def fadeAudio(path):
+    #demux
+    path = path.replace(" ","\ ")
+    if not isfile(path+".audio.wav"):
+        system("ffmpeg -i "+path+" -map 0:a "+path+".audio.wav -map 0:v "+path+".onlyVideo.mov")
+
+    # fade
+    proc = subprocess.run(["sox",path+".audio.wav", path+".fadeAudio.wav","fade","0.05","0"], stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+    print(proc.stdout);
+    # rejoin
+    system("ffmpeg -y -i "+path+".onlyVideo.mov -i "+path+".fadeAudio.wav -shortest -c copy "+path)
+
+    # clean_up
+    system("rm "+path+".audio.wav")
+    system("rm "+path+".fadeAudio.wav")
+    system("rm "+path+".onlyVideo.mov")
+
+    return(path)
+
 def analyzeAudio(path):
 
     #demux
@@ -47,9 +81,28 @@ def analyzeGroupAudio(thisPath):
         return
     else:
         pool = ThreadPool(4)
-        results = pool.map(analyzeAudio, dirs)
-        pool.close()
-        pool.join()
+        #results = pool.map(analyzeAudio, dirs)
+        dialog = Gtk.Dialog("Analyzing Group Volumes")
+        pb = Gtk.ProgressBar()
+        btn = Gtk.Button("Close")
+        btn.connect("clicked",dialog.destroy)
+        dialog.vbox.pack_start(Gtk.Label("Analyzing group:" + thisPath ,xalign=0),False,True,0)
+        dialog.vbox.pack_start(pb,True,True,0)
+        dialog.vbox.pack_start(btn,True,True,0)
+
+        dialog.show_all()
+        dialog.set_position(Gtk.WindowPosition.CENTER_ALWAYS)
+        dialog.show()
+
+        results = []
+        try:
+            for i in pool.imap_unordered(analyzeAudio, dirs):
+                results.append(i)
+                pb.set_fraction(pb.get_fraction() + 1/len(dirs))
+        finally:
+            pool.close()
+            pool.join()
+            #dialog.destroy();
 
         wf = open(join(thisPath,"rms"),"w+")
 
@@ -1333,6 +1386,9 @@ class MyWindow(Gtk.Window):
         btn = Gtk.Button("Analyze Volume")
         btn.connect("clicked",self.analyzeSetVolume)
         box_btnh.pack_start(btn,True,True,0)
+        btn = Gtk.Button("Fade audio")
+        btn.connect("clicked",self.fadeSetVolume)
+        box_btnh.pack_start(btn,True,True,0)
         box_groupListAndBtns.pack_start(box_btnh,False,True,0)
 
         box_groupsLists.pack_start(box_groupListAndBtns,True, True, 0)
@@ -1432,6 +1488,11 @@ class MyWindow(Gtk.Window):
         folders = [self.selectedConf()['sources'][f]['src'] for f in self.selectedConf()['sources'] if self.selectedConf()['sources'][f]['type']=='folder']
         for f in folders:
             analyzeGroupAudio(join(self.selectedSetPath(),f))
+
+    def fadeSetVolume(self,args):
+        folders = [self.selectedConf()['sources'][f]['src'] for f in self.selectedConf()['sources'] if self.selectedConf()['sources'][f]['type']=='folder']
+        for f in folders:
+            fadeGroup(join(self.selectedSetPath(),f))
 
     # lists interaction
     def setRandomnessToggled(self,widget,path):

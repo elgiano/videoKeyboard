@@ -64,6 +64,8 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 
 		void newMidiMessage(ofxMidiMessage& eventArgs);
         std::vector<ofxMidiIn> midiInputs;
+				std::vector<ofxMidiOut> midiOutputs;
+
 		ofxMidiIn midiIn;
         ofxMidiIn midiIn2;
 
