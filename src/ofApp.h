@@ -10,7 +10,7 @@
 
 #include "config.h"
 
-#define MAX_VIDEOS 512
+#define MAX_VIDEOS 1056
 #define MAX_SETS 8
 
 #define MAX_CAPTURE 2
@@ -225,7 +225,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 class SoundFader : public ofThread {
 
 public:
-  int deltams = 10;
+  int deltams = 1;
 
   void setup(ofApp *controller,int key) {
     movieN = key;
@@ -234,7 +234,7 @@ public:
   }
 
   void threadedFunction() {
-		ctrl->setVideoVolume(movieN,0);
+    ctrl->setVideoVolume(movieN,0);
     while(isThreadRunning()){
       ctrl->soundFades(movieN);
       std::this_thread::sleep_for(std::chrono::milliseconds(deltams));
