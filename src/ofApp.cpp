@@ -581,14 +581,14 @@ void ofApp::soundFades(int i){
       //vol = (movie[i].getPosition()-startPos[i])*movie[i].getDuration();
       vol = (now - fi_start[i])/sound_fadeTime;
       //cout << "pct: " << vol << endl;
-      vol = pow(vol,10);
+      vol = pow(vol,2);
       //cout << "pow: " << vol << endl;
       //vol = vol/sound_fadeTime;
-  }else if(movie[i].getPosition()*movie[i].getDuration()<sound_fadeTime){
+  }/*else if(movie[i].getPosition()*movie[i].getDuration()<sound_fadeTime){
     vol = movie[i].getPosition()*movie[i].getDuration()/sound_fadeTime;
     //cout << "pct: " << vol << endl;
-    vol = pow(vol,10);
-  }
+    vol = pow(vol,2);
+  }*/
   // sound fade_out
   if(fo_start[i]>0){
       if(fade_out<=sound_fadeTime){
@@ -600,7 +600,7 @@ void ofApp::soundFades(int i){
   }else{
      vol_fo = ((1-movie[i].getPosition())*movie[i].getDuration()/sound_fadeTime);
   }
-    vol_fo = pow(vol_fo,10);
+    vol_fo = pow(vol_fo,2);
 
   vol = vol <= 0 ? 0 : vol >= 1 ? 1 : vol;
   vol_fo = vol_fo <= 0 ? 0 : vol_fo >= 1 ? 1 : vol_fo;
@@ -623,9 +623,11 @@ void ofApp::setVideoVolume(int key, float vol){
     movie[key].setVolume(vol*volume*videoVolume[key]*correction);
       /*cout << "#"<<key<< " volume " << vol*volume*videoVolume[key]*setAvgRms[setNumberFromKey(key)]/videoRms[key] <<  " correction " << videoRms[key] << endl;
       cout << "set " << setNumberFromKey(key) << " avg: " << setAvgRms[setNumberFromKey(key)] << endl;*/
-      //cout << "correction " << correction << endl;
+      //cout << "vol " << vol*volume*videoVolume[key]*correction << endl;
   }else{
     movie[key].setVolume(vol*volume*videoVolume[key]);
+      //cout << "vol " << vol*volume*videoVolume[key] << endl;
+
   }
 
 }

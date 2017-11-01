@@ -285,7 +285,7 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
               case MidiCommand::rms_correction_pct:
                   rms_correction_pct = (float)msg.value/midiMaxVal;
                   rms_mode = msg.value>0;
-                  cout << "rms correction %:" << rms_correction_pct << endl;
+                  cout << "rms correction %:" << rms_correction_pct << " " << rms_mode << endl;
                   break;
               case MidiCommand::black_screen:
                   black_screen = (int)round((1-pow(1-(float)msg.value/midiMaxVal,2))*255);
