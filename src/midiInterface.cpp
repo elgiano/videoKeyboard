@@ -12,7 +12,7 @@ void ofApp::setupMidi(){
         m_in.openPort(port);
         m_in.addListener(this);
         midiInputs.push_back(m_in);
-        
+
         ofxMidiOut m_out;
         m_out.openPort(port);
         midiOutputs.push_back(m_out);
@@ -74,7 +74,7 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
               cout << "speed" << endl;
               break;
             case MidiCommand::speed_reverse:
-              speed_reverse = msg.value > (midiMaxVal/2);
+              speed_reverse = msg.value != 0;
               changeAllSpeed(-1); // only update direction;
               cout << "speed reverse:" << speed_reverse << endl;
               break;

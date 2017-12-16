@@ -616,19 +616,21 @@ void ofApp::soundFades(int i){
 }
 
 void ofApp::setVideoVolume(int key, float vol){
-  if(rms_mode){
+  /*if(rms_mode){
       float correction = setAvgRms[setNumberFromKey(key)]/videoRms[key];
       correction = globalAvgRms/videoRms[key];
       correction = 1+((correction-1)*rms_correction_pct);
-    movie[key].setVolume(vol*volume*videoVolume[key]*correction);
+    movie[key].setVolume(vol*volume*videoVolume[key]*correction);*/
       /*cout << "#"<<key<< " volume " << vol*volume*videoVolume[key]*setAvgRms[setNumberFromKey(key)]/videoRms[key] <<  " correction " << videoRms[key] << endl;
       cout << "set " << setNumberFromKey(key) << " avg: " << setAvgRms[setNumberFromKey(key)] << endl;*/
       //cout << "vol " << vol*volume*videoVolume[key]*correction << endl;
-  }else{
+  /*}else{
     movie[key].setVolume(vol*volume*videoVolume[key]);
       //cout << "vol " << vol*volume*videoVolume[key] << endl;
 
-  }
+  }*/
+  movie[key].setVolume(0);
+
 
 }
 
