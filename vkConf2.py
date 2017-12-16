@@ -1,8 +1,8 @@
 #!/bin/python
 #/Users/sorenkjaergaard/Desktop/VideoKeyboard/dev/videoKeyboard2/bin/sets
 
-from os import listdir, mkdir,rmdir, symlink, remove, rename, system
-from os.path import isdir, isfile, join, getsize, abspath, isabs,realpath, basename,splitext
+from os import listdir, mkdir,rmdir, symlink, remove, rename, system, pardir
+from os.path import isdir, isfile, join, getsize, abspath, isabs,realpath, basename,splitext,exists
 from shutil import copytree
 import gi
 gi.require_version('Gtk', '3.0')
@@ -17,6 +17,39 @@ import rtmidi
 
 from multiprocessing.dummy import Pool as ThreadPool
 import subprocess
+
+
+def extractAudioGroup(path):
+
+    allowExt = ".mov"
+
+    dirs = listdir( path )
+    dirs = [join(path,f) for f in dirs if splitext(f)[1] == allowExt]
+    if len(dirs) == 0 :
+        print("Can't find any file! (ext: "+allowExt+")");
+        return
+    else:
+        pool = ThreadPool(4)
+        results = pool.map(extractAudio, dirs)
+        pool.close()
+        pool.join()
+
+def extractAudio(path):
+    #demux
+    audiopath = abspath(join(path,pardir,"audio"))
+    if not exists(audiopath):
+        try:
+            mkdir(audiopath)
+        except:
+            print("folder already existed")
+
+    #audiopath = abspath(join(path,pardir,"audio"))
+    #path = path.replace(" ","\ ")
+    sfpath = join(audiopath,basename(path))+".wav"
+
+    system("ffmpeg -y -i '"+path+"' -map 0:a '"+sfpath+"'")
+
+    return(path)
 
 def fadeGroup(path):
 
@@ -1389,6 +1422,9 @@ class MyWindow(Gtk.Window):
         btn = Gtk.Button("Fade audio")
         btn.connect("clicked",self.fadeSetVolume)
         box_btnh.pack_start(btn,True,True,0)
+        btn = Gtk.Button("Extract audio")
+        btn.connect("clicked",self.extractSetAudio)
+        box_btnh.pack_start(btn,True,True,0)
         box_groupListAndBtns.pack_start(box_btnh,False,True,0)
 
         box_groupsLists.pack_start(box_groupListAndBtns,True, True, 0)
@@ -1493,6 +1529,11 @@ class MyWindow(Gtk.Window):
         folders = [self.selectedConf()['sources'][f]['src'] for f in self.selectedConf()['sources'] if self.selectedConf()['sources'][f]['type']=='folder']
         for f in folders:
             fadeGroup(join(self.selectedSetPath(),f))
+
+    def extractSetAudio(self,args):
+        folders = [self.selectedConf()['sources'][f]['src'] for f in self.selectedConf()['sources'] if self.selectedConf()['sources'][f]['type']=='folder']
+        for f in folders:
+            extractAudioGroup(join(self.selectedSetPath(),f))
 
     # lists interaction
     def setRandomnessToggled(self,widget,path):
