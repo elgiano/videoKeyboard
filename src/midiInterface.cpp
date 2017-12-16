@@ -79,7 +79,7 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
               cout << "speed reverse:" << speed_reverse << endl;
               break;
       			case MidiCommand::layout_change:
-              layout = round(msg.value/(midiMaxVal/N_LAYOUTS/2))-N_LAYOUTS;
+              layout = round((float)msg.value/(midiMaxVal)*((N_LAYOUTS-1)*2))-(N_LAYOUTS-1);
               cout << "layout " << ofToString(layout)<< endl;
               break;
       			case MidiCommand::brightness:
@@ -120,14 +120,26 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
                   }
                   // if inhibit: dont break, go to sostenuto
       			case MidiCommand::sostenuto:
+                  if(sostenutoIsFreeze){
+                      sostenutoFreeze = (  msg.value)/midiMaxVal;
+                      if(sostenutoFreeze==0){stopSostenutoFreeze();}
+                      if(sostenutoFreeze==1){startSostenutoFreeze();}
+                      break;
+                  }else{
+
                   cout << "sostenuto" << endl;
                   sostenuto = (msg.value)/midiMaxVal;
                   if(sostenuto==0){stopSostenuto();}
                   if(sostenuto==1){startSostenuto();}
+                  }
+                  
               break;
 
               case MidiCommand::sostenuto_freeze_inhibit:
                   sostenutoFreezeInhibit = msg.value!=0;
+                  break;
+              case MidiCommand::sostenuto_is_freeze:
+                  sostenutoIsFreeze = msg.value!=0;
                   break;
       			case MidiCommand::dynamics_switch:
                   isDynamic = msg.value!=0;
@@ -195,6 +207,10 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
               case MidiCommand::rms_normalize:
                     //rms_mode = msg.value!=0;
                     cout << "rms_mode "<< rms_mode << endl;
+                  break;
+              case MidiCommand::rms_global:
+                  rms_global = msg.value!=0;
+                  cout << "rms_global "<< rms_global << endl;
                   break;
               case MidiCommand::stutter_mode:
                   //stutterMode = !stutterMode;
@@ -274,6 +290,36 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
                   loadSet(5);
                   cout << "activeSet " << ofToString(activeSet)<< endl;
                   break;
+              case MidiCommand::switch_to_set_6:
+                  //activeSet = 5%loadedSets;
+                  loadSet(6);
+                  cout << "activeSet " << ofToString(activeSet)<< endl;
+                  break;
+              case MidiCommand::switch_to_set_7:
+                  //activeSet = 5%loadedSets;
+                  loadSet(7);
+                  cout << "activeSet " << ofToString(activeSet)<< endl;
+                  break;
+              case MidiCommand::switch_to_set_8:
+                  //activeSet = 5%loadedSets;
+                  loadSet(8);
+                  cout << "activeSet " << ofToString(activeSet)<< endl;
+                  break;
+              case MidiCommand::switch_to_set_9:
+                  //activeSet = 5%loadedSets;
+                  loadSet(9);
+                  cout << "activeSet " << ofToString(activeSet)<< endl;
+                  break;
+              case MidiCommand::switch_to_set_10:
+                  //activeSet = 5%loadedSets;
+                  loadSet(10);
+                  cout << "activeSet " << ofToString(activeSet)<< endl;
+                  break;
+              case MidiCommand::switch_to_set_11:
+                  //activeSet = 5%loadedSets;
+                  loadSet(11);
+                  cout << "activeSet " << ofToString(activeSet)<< endl;
+                  break;
               case MidiCommand::ribattutoSpeed:
                   ribattutoSpeed = msg.value!=0;
                   cout << "ribattutoSpeed " << ofToString(ribattutoSpeed)<< endl;
@@ -287,7 +333,8 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
                   cout << "sound_fadeTime:" << sound_fadeTime << endl;
                   break;
               case MidiCommand::rms_correction_pct:
-                  rms_correction_pct = (float)msg.value/midiMaxVal;
+                  //rms_correction_pct = (float)msg.value/midiMaxVal;
+                  rms_correction_pct = pow((float)msg.value/midiMaxVal,2);
                   rms_mode = msg.value>0;
                   cout << "rms correction %:" << rms_correction_pct << " " << rms_mode << endl;
                   break;

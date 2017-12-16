@@ -11,7 +11,7 @@
 #include "config.h"
 
 #define MAX_VIDEOS 1056
-#define MAX_SETS 8
+#define MAX_SETS 12
 
 #define MAX_CAPTURE 2
 #define N_LAYOUTS 6 // fullscreen, double v, double h, triple, tryptich, quad
@@ -38,7 +38,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
         int brightness_opacity;
 		int black_screen=0;
 
-		bool blending_multiply;
+		bool blending_multiply=true;
 		bool blending_add=false;
 		bool isDynamic = false;
 		bool isFading = true;
@@ -167,7 +167,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
         float sostenuto;
         float sostenutoFreeze;
         bool sostenutoFreezeInhibit = false;
-
+        bool sostenutoIsFreeze = false;
 
 		bool reset_videos[MAX_VIDEOS] = {false};
 
@@ -190,6 +190,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		float videoVolume[MAX_VIDEOS];
 		float videoRms[MAX_VIDEOS];
         float rms_correction_pct=1;
+        bool rms_global = false;
 
 		float startPos[MAX_VIDEOS];
 		float stutterStart[MAX_VIDEOS];

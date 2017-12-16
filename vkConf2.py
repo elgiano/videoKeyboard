@@ -1,5 +1,5 @@
 #!/bin/python
-#/home/giano/projects/soren/videoKeyboardHap/bin/sets
+#/Users/sorenkjaergaard/Desktop/VideoKeyboard/dev/videoKeyboard2/bin/sets
 
 from os import listdir, mkdir,rmdir, symlink, remove, rename, system
 from os.path import isdir, isfile, join, getsize, abspath, isabs,realpath, basename,splitext
@@ -37,10 +37,10 @@ def fadeAudio(path):
     #demux
     path = path.replace(" ","\ ")
     if not isfile(path+".audio.wav"):
-        system("ffmpeg -i "+path+" -map 0:a "+path+".audio.wav -map 0:v "+path+".onlyVideo.mov")
+        system("ffmpeg -i "+path+" -map 0:a "+path+".audio.wav -map 0:v -c copy "+path+".onlyVideo.mov")
 
     # fade
-    proc = subprocess.run(["sox",path+".audio.wav", path+".fadeAudio.wav","fade","0.05","0"], stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+    proc = subprocess.run(["sox",path+".audio.wav", path+".fadeAudio.wav","fade","0.15","0"], stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
     print(proc.stdout);
     # rejoin
     system("ffmpeg -y -i "+path+".onlyVideo.mov -i "+path+".fadeAudio.wav -shortest -c copy "+path)

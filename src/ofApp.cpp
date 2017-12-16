@@ -301,6 +301,8 @@ void ofApp::drawVideoInLayout(int movieN){
           fo_alpha = 0;
           if((now-fo_start[movieN])>sound_fadeTime){
               deactivateVideo(movieN);fo_start[movieN] = 0.0;return;
+          }else{
+              return; // just dont draw if waiting for soundfade to finish
           }
       }else{
         // otherwise update the fade out
@@ -618,7 +620,10 @@ void ofApp::soundFades(int i){
 void ofApp::setVideoVolume(int key, float vol){
   if(rms_mode){
       float correction = setAvgRms[setNumberFromKey(key)]/videoRms[key];
-      correction = globalAvgRms/videoRms[key];
+      if(rms_global){
+        correction = globalAvgRms/videoRms[key];
+      }
+      //correction = ofClamp(correction,0.1,10);
       correction = 1+((correction-1)*rms_correction_pct);
     movie[key].setVolume(vol*volume*videoVolume[key]*correction);
       /*cout << "#"<<key<< " volume " << vol*volume*videoVolume[key]*setAvgRms[setNumberFromKey(key)]/videoRms[key] <<  " correction " << videoRms[key] << endl;

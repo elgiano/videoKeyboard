@@ -38,6 +38,8 @@ enum class MidiCommand {
         stutter_dur_global,
   dynamics_volume,
   rms_normalize,
+    rms_global,
+
   harmonic_loops,
   harmonic_loop_base_dur,
   switch_to_layout_0,
@@ -54,13 +56,21 @@ enum class MidiCommand {
   switch_to_set_3,
   switch_to_set_4,
   switch_to_set_5,
+    switch_to_set_6,
+    switch_to_set_7,
+    switch_to_set_8,
+    switch_to_set_9,
+    switch_to_set_10,
+    switch_to_set_11,
+
         ribattutoSpeed,
         panic,
         sound_fade_time,
         rms_correction_pct,
         blending_add_switch,
         black_screen,
-    sostenuto_freeze_inhibit
+    sostenuto_freeze_inhibit,
+    sostenuto_is_freeze
 };
 
 
@@ -112,6 +122,8 @@ class Config {
        {"stutter_dur_global", MidiCommand::stutter_dur_global },
        {"dynamics_volume", MidiCommand::dynamics_volume },
        {"rms_normalize", MidiCommand::rms_normalize },
+          {"rms_global", MidiCommand::rms_global },
+
        {"harmonic_loops", MidiCommand::harmonic_loops },
        {"harmonic_loop_base_dur", MidiCommand::harmonic_loop_base_dur },
        {"switch_to_layout_0", MidiCommand::switch_to_layout_0 },
@@ -129,6 +141,13 @@ class Config {
        {"switch_to_set_3", MidiCommand::switch_to_set_3 },
        {"switch_to_set_4", MidiCommand::switch_to_set_4 },
        {"switch_to_set_5", MidiCommand::switch_to_set_5 },
+          {"switch_to_set_6", MidiCommand::switch_to_set_6 },
+          {"switch_to_set_7", MidiCommand::switch_to_set_7 },
+          {"switch_to_set_8", MidiCommand::switch_to_set_8 },
+          {"switch_to_set_9", MidiCommand::switch_to_set_9 },
+          {"switch_to_set_10", MidiCommand::switch_to_set_10 },
+          {"switch_to_set_11", MidiCommand::switch_to_set_11 },
+          
        {"ribattutoSpeed", MidiCommand::ribattutoSpeed },
        {"panic", MidiCommand::panic },
        {"sound_fade_time", MidiCommand::sound_fade_time },
@@ -136,6 +155,8 @@ class Config {
        {"blending_add_switch", MidiCommand::blending_add_switch},
        {"black_screen", MidiCommand::black_screen},
           {"sostenuto_freeze_inhibit", MidiCommand::sostenuto_freeze_inhibit},
+          {"sostenuto_is_freeze", MidiCommand::sostenuto_is_freeze},
+
 
 
       };
