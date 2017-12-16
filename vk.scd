@@ -54,6 +54,8 @@ SynthDef(\vkSampler){|buf,speed=1,t_reset=0,start=0,gate=1,fade_out=0,amp=1,stut
 	\sostenuto_freeze:{|val|~vk.setSostenutoFreeze(val)},
 	\sustain_mode:{|val|~vk.sustain_mode = (val*2).round},
 	\sostenuto_freeze_inhibit:{|val| ~vk.sostenutoFreezeInhibit = val!=0},
+	\sostenuto_is_freeze:{|val| ~vk.sostenutoIsFreeze = val!=0},
+
 
 	/*
 	"rms_normalize",
@@ -95,6 +97,7 @@ SynthDef(\vkSampler){|buf,speed=1,t_reset=0,start=0,gate=1,fade_out=0,amp=1,stut
 	vk.ribattuto_speed = false;
 	vk.sustain_mode = 0;
 	vk.sostenutoFreezeInhibit = false;
+	vk.sostenutoIsFreeze = false;
 
 	vk.setAvgRms = Order();
 	vk.globalAvgRms = 1;
@@ -170,7 +173,9 @@ SynthDef(\vkSampler){|buf,speed=1,t_reset=0,start=0,gate=1,fade_out=0,amp=1,stut
 	if(File.exists(dir+/+"config.json")){
 		conf = JSONFileReader.read(dir+/+"config.json");
 		conf.postln;
-		conf["sources"].keys.asArray.sort.do{|k|
+		conf["sources"].keys.asArray.sort({|a,b| a.asInteger <= b.asInteger}).do{|k|
+			"loading source group".postln;
+			k.postln;
 			switch(conf["sources"][k]["type"],
 				"multiple",{vk.loadMultiple(dir)},
 				"folder",{vk.loadFolder(dir+/+conf["sources"][k]["src"])},
@@ -321,9 +326,9 @@ SynthDef(\vkSampler){|buf,speed=1,t_reset=0,start=0,gate=1,fade_out=0,amp=1,stut
 			dur = vk.info[key][\stutterDur]*vk.stutterDurGlobal*vk.samples[key].duration;
 		};
 
-		if(vk.info[key][\active]){
+		if(vk.info[key][\active] || vk.sostenutoFreezeVideos[key]){
 
-			if(onlyDur){vk.node[key].set(\stutterDur, dur)}{
+			if(onlyDur){vk.node[key].set(\stutterDur, dur.postln)}{
 				var start = if(current){
 					// get pos from synth
 					vk.node[key].set(\start,0,\stutter,vk.sostenutoFreezeVideos[key] || vk.harmonic_loops,\stutterDur, dur,
@@ -332,6 +337,7 @@ SynthDef(\vkSampler){|buf,speed=1,t_reset=0,start=0,gate=1,fade_out=0,amp=1,stut
 
 				}{
 					vk.node[key].set(\start,0,\stutter,(vk.sostenutoFreezeVideos[key] || vk.harmonic_loops).postln,\stutterDur, dur,\stutterPos,0);
+					vk.node[key].set(\t_latchPos,1);
 					"setting stutter for key %, val: %, dur:% \n".postf(key,(vk.sostenutoFreezeVideos[key] || vk.harmonic_loops),dur);
 				};
 			};
@@ -366,14 +372,20 @@ SynthDef(\vkSampler){|buf,speed=1,t_reset=0,start=0,gate=1,fade_out=0,amp=1,stut
 	}
 };
 ~vk.setSostenuto = {|vk,val|
+	if(vk.sostenutoIsFreeze){
+		vk.setSostenutoFreeze(val);
+	}{
 	vk.sostenuto = val>0;
 	if(vk.sostenuto){vk.startSostenuto();}{vk.stopSostenuto();};
+	}
 };
 ~vk.startSostenuto = {|vk|
+	"start sostenuto".postln;
 	vk.info.keysValuesDo{|k,v| if(vk.info[k][\active]){vk.sostenutoVideos[k]=true};};
 };
 ~vk.stopSostenuto = {|vk|
-	vk.sostenutoVideos.keysValuesDo{|k,v| if(v){vk.sostenutoVideos[k]=false;if(vk.info[k][\active]){vk.stopVideo(k)}};};
+	"stop sostenuto".postln;
+	vk.sostenutoVideos.keysValuesDo{|k,v| if(v){vk.sostenutoVideos[k]=false;if(vk.info[k][\active].not){vk.stopSample(k)}};};
 };
 ~vk.setSostenutoFreeze = {|vk,val|
 	if(vk.sostenutoFreezeInhibit){vk.setSostenuto(val)}{
@@ -385,7 +397,7 @@ SynthDef(\vkSampler){|buf,speed=1,t_reset=0,start=0,gate=1,fade_out=0,amp=1,stut
 	vk.info.keysValuesDo{|k,v| if(vk.info[k][\active]){vk.sostenutoFreezeVideos[k]=true;vk.setSampleStutter(k,true,false);};};
 };
 ~vk.stopSostenutoFreeze = {|vk|
-	vk.sostenutoFreezeVideos.keysValuesDo{|k,v| if(v){vk.sostenutoFreezeVideos[k]=false;vk.setSampleStutter(k,true,false);if(vk.info[k][\active]){vk.stopVideo(k)}};};
+	vk.sostenutoFreezeVideos.keysValuesDo{|k,v| if(v){vk.sostenutoFreezeVideos[k]=false;vk.setSampleStutter(k,true,false);if(vk.info[k][\active].not){vk.stopSample(k)}};};
 };
 
 ~vk.changeAllSpeed = {|vk,ctrl|
@@ -449,6 +461,7 @@ SynthDef(\vkSampler){|buf,speed=1,t_reset=0,start=0,gate=1,fade_out=0,amp=1,stut
 		if(vk.info[key][\active].not){
 			vk.info[key][\active] = true;
 			// start playing
+			if(vk.node[key].notNil){vk.node[key].free};
 			vk.node[key] = Synth(\vkSampler,[\buf,vk.samples[key],\fade_out,if(vk.fade_switch){vk.fadeOut}{0}]);
 			vk.updateSampleSpeed(key);
 			vk.updateSampleVolume(key);
@@ -497,11 +510,11 @@ SynthDef(\vkSampler){|buf,speed=1,t_reset=0,start=0,gate=1,fade_out=0,amp=1,stut
 
 )
 
-~vk.init("/home/giano/projects/soren/videoKeyboardHap/bin/data/");
+~vk.init("/Users/sorenkjaergaard/Desktop/VideoKeyboard/dev/videoKeyboard2/bin/data/");
 ~vk.samples.select{|sa|sa.numFrames.isNil}.keysValuesDo{|k,v| ~vk.samples[k] = Buffer.read(s,v.path)}
 
 
-~vk.info.keysValuesDo
+~vk.samples.indices.do{|sa|~vk.stopSample(sa)}
 
 ~vk.samples.collect{|sa|sa.duration}
 ~vk.samples.array[(0..250)].collect{|sa|sa.duration}
@@ -511,3 +524,8 @@ b = Buffer.read(s,~vk.samples[139].path)
 b.play
 
 numBuffers
+∏
+s.cachedBuffersDo{|sa|sa.free}
+338 - ~vk.samples.size
+
+~vk.stopSample(39)
