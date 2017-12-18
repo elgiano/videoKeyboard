@@ -57,10 +57,13 @@ SynthDef(\vkSampler){|buf,speed=1,t_reset=0,start=0,gate=1,fade_out=0,amp=1,stut
 	\sostenuto_is_freeze:{|val| ~vk.sostenutoIsFreeze = val!=0},
 
 
-	/*
-	"rms_normalize",
-	"sound_fade_time",
-	"rms_correction_pct",*/
+
+	\rms_normalize:{|val| ~vk.rms_mode = val!=0; ~vk.updateAllVolumes();},
+	\rms_correction_pct:{|val| ~vk.rms_correction_pct = val**2;~vk.rms_mode = val!=0; ~vk.updateAllVolumes();},
+	\rms_global:{|val| ~vk.rms_global = val!=0; ~vk.updateAllVolumes();},
+
+	//"sound_fade_time",
+
 
 	\speed_dynamics:{|val| ~vk.dynIsSpeed = val!=0; ~vk.updateAllSpeeds();},
 	\dynamics_decay:{|val| ~vk.dynIsDecaying = val!=0},
@@ -98,6 +101,10 @@ SynthDef(\vkSampler){|buf,speed=1,t_reset=0,start=0,gate=1,fade_out=0,amp=1,stut
 	vk.sustain_mode = 0;
 	vk.sostenutoFreezeInhibit = false;
 	vk.sostenutoIsFreeze = false;
+
+	vk.rms_mode = false;
+	vk.rms_correction_pct = 0;
+	vk.rms_global = false;
 
 	vk.setAvgRms = Order();
 	vk.globalAvgRms = 1;
@@ -303,12 +310,35 @@ SynthDef(\vkSampler){|buf,speed=1,t_reset=0,start=0,gate=1,fade_out=0,amp=1,stut
 ~vk.updateSampleVolume = {|vk,key|
 	if(vk.info[key]!=nil){
 		if(vk.info[key][\active]){
-		vk.node[key].set(\amp,
-			(vk.masterVolume*if(vk.dynIsVolume){vk.info[key][\dyn]}{1}).postln
+			var correction = 1;
+			if(vk.rms_mode){
+				correction = vk.setAvgRms[vk.setNumberFromKey(key)]/(vk.info[key][\rms]?1);
+				if(vk.rms_global){
+					correction = vk.globalAvgRms/(vk.info[key][\rms]?1);
+				};
+				correction = 1+((correction-1)*vk.rms_correction_pct);
+				"#% volume % correction % ".postf(key,vk.masterVolume*if(vk.dynIsVolume){vk.info[key][\dyn]}{1}*correction ,correction);
+				"set % avg: %".postf(vk.setNumberFromKey(key),vk.setAvgRms[vk.setNumberFromKey(key)]);
+				"".postln;
+			};
+
+			vk.node[key].set(\amp,
+				(vk.masterVolume*if(vk.dynIsVolume){vk.info[key][\dyn]}{1}*correction).postln
 			)
 		}
 	}
 };
+
+~vk.setNumberFromKey ={|vk,key|
+    var i = vk.setStart.selectIndices{|start|start>key }[0];
+	if(i.notNil){
+		(i-1).clip(0,vk.loadedSets)
+	}{
+		if(vk.loadedSets>0){vk.loadedSets-1}{0};
+	}
+};
+
+
 ~vk.updateAllVolumes = {|vk|
 	vk.samples.indices.do{|k|vk.updateSampleVolume(k)};
 };
@@ -513,7 +543,7 @@ SynthDef(\vkSampler){|buf,speed=1,t_reset=0,start=0,gate=1,fade_out=0,amp=1,stut
 ~vk.init("/Users/sorenkjaergaard/Desktop/VideoKeyboard/dev/videoKeyboard2/bin/data/");
 ~vk.samples.select{|sa|sa.numFrames.isNil}.keysValuesDo{|k,v| ~vk.samples[k] = Buffer.read(s,v.path)}
 
-
+~vk.initMIDI
 ~vk.samples.indices.do{|sa|~vk.stopSample(sa)}
 
 ~vk.samples.collect{|sa|sa.duration}
