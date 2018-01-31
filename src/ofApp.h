@@ -57,6 +57,9 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		void decayDyn();
 
 		ofLoopType loopState = OF_LOOP_NORMAL;
+
+		void setLoopState(ofLoopType type);
+		
 		ofColor videoColor;
 
         int midiNoteToVideoKey(int note);

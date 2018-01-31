@@ -132,7 +132,7 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
                   if(sostenuto==0){stopSostenuto();}
                   if(sostenuto==1){startSostenuto();}
                   }
-                  
+
               break;
 
               case MidiCommand::sostenuto_freeze_inhibit:
@@ -167,20 +167,30 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
               sustain_mode = (int)round((float)msg.value/(midiMaxVal/2));
               break;
       	  	case MidiCommand::loop_mode:
-              switch((int)round((float)msg.value/(midiMaxVal/2))){
+              /*switch((int)round((float)msg.value/(midiMaxVal/2))){
                 case 0:
                   cout << "loop none"<< endl;
-                  loopState = OF_LOOP_NONE;
+                  setLoopState(OF_LOOP_NONE);
+                  //loopState = OF_LOOP_NONE;
                   break;
                 case 1:
                   cout << "loop normal" << endl;
-                  loopState = OF_LOOP_NORMAL;
+                  setLoopState(OF_LOOP_NORMAL);
+                  //loopState = OF_LOOP_NORMAL;
                   break;
                 case 2:
                   cout << "loop rev" << endl;
-                  loopState = OF_LOOP_PALINDROME;
+                  setLoopState(OF_LOOP_PALINDROME);
+                  //loopState = OF_LOOP_PALINDROME;
                   break;
-              }
+              }*/
+              if(msg.value>0){
+                cout << "loop normal" << endl;
+                setLoopState(OF_LOOP_NORMAL);
+              }else{
+                cout << "loop none"<< endl;
+                setLoopState(OF_LOOP_NONE);
+              };
               break;
               case MidiCommand::speed_dynamics:
                   cout << "dynIsSpeed" << endl;

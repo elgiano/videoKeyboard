@@ -118,7 +118,7 @@ void ofApp::initVideoVariables(int key){
   startPos[key] = 0;
   stutterStart[key] = 0;
   stutterDur[key] = 0.1;
-  movie[key].setLoopState(OF_LOOP_NORMAL);
+  movie[key].setLoopState(loopState);
   soundFader[key] = new SoundFader();
   soundFader[key]->setup(this,key);
 }
@@ -520,10 +520,14 @@ void ofApp::update(){
   }
   for(int i=0;i<MAX_VIDEOS;i++){
     if(active_videos[i] or sostenuto_videos[i] or sostenutoFreeze_videos[i]){
-        if(!movie[i].isPlaying()){
+        if(!movie[i].isPlaying() && reset_videos[i]){
             movie[i].setSpeed(speed*(ribattutoSpeed?tapSpeed[i]:1));
             movie[i].setPosition(startPos[i]);
             movie[i].play();
+            movie[i].setLoopState(loopState);
+            reset_videos[i] = false;
+            //cout << "looping " << movie[i].getLoopState() << " none=" << OF_LOOP_NONE << endl;
+
         }else{
             if(isCaptureKey(i)){
                 captureFromKey(i).update();
@@ -536,12 +540,21 @@ void ofApp::update(){
 
                 if(sostenutoFreeze_videos[i]){
                     if(
-                       (movie[i].getPosition() > (stutterStart[i]+(stutterDur[i]*stutterDurGlobal/movie[i].getDuration())))
+                       /*
+(movie[i].getPosition() > (stutterStart[i]+(stutterDur[i]*stutterDurGlobal/movie[i].getDuration())))
                        or (movie[i].getPosition() < stutterStart[i])
+                       ){*/
+                       (movie[i].getPosition() < (stutterStart[i]-(stutterDur[i]*stutterDurGlobal/movie[i].getDuration())))
+                       or (movie[i].getPosition() >= stutterStart[i])
                        ){
                         cout << "stuttering " << i << endl;
-                        movie[i].setPosition(stutterStart[i]);
-                        movie[i].play();
+                        movie[i].setPosition(stutterStart[i]-(stutterDur[i]*stutterDurGlobal/movie[i].getDuration()));
+                        // movie[i].setPosition(stutterStart[i]);
+                        //movie[i].play();
+                        //movie[i].setLoopState(OF_LOOP_NORMAL);
+                        //cout << "loop " << movie[i].getLoopState() << " none=" << OF_LOOP_NONE << endl;
+
+
                     }
                 }
               if(reset_videos[i]){
@@ -554,14 +567,18 @@ void ofApp::update(){
                   }
                   //setVideoVolume(i, 0);
                   movie[i].play();
+                  movie[i].setLoopState(loopState);
+                  //cout << "loopres " << movie[i].getLoopState() << " none=" << OF_LOOP_NONE << endl;
+
+
                   continue;
                }
 
-                    if(harmonic_loops){
-                      if(movie[i].getPosition()*movie[i].getDuration()>=harmonicLoopDur(i)){
-                        movie[i].setPosition(startPos[i]);
-                      }
-                    }
+              if(harmonic_loops){
+                if(movie[i].getPosition()*movie[i].getDuration()>=harmonicLoopDur(i)){
+                  movie[i].setPosition(startPos[i]);
+                }
+              }
 
 
               movie[i].update();
@@ -733,6 +750,13 @@ void ofApp::stopVideo(int key){
   }
 }
 
+void ofApp::setLoopState(ofLoopType type){
+  loopState = type;
+  for(int i=0;i<MAX_VIDEOS;i++){
+    movie[i].setLoopState(loopState);
+  }
+}
+
 // ## SPEED ##
 
 void ofApp::changeAllSpeed(float control){
@@ -827,6 +851,7 @@ void ofApp::startSostenutoFreeze(){
     memcpy(sostenutoFreeze_videos,active_videos,MAX_VIDEOS);
     for(int i=0;i<MAX_VIDEOS;i++){
       if(sostenutoFreeze_videos[i]){
+        cout << "Stuttering " << i << "pos: " << movie[i].getPosition() << endl;
         stutterStart[i] = movie[i].getPosition();
         /*if(!stutterMode){
           stutterDur[i] = 0;
@@ -841,6 +866,7 @@ void ofApp::stopSostenutoFreeze(){
     for(int i=0;i<MAX_VIDEOS;i++){
         if(sostenutoFreeze_videos[i]){
             sostenutoFreeze_videos[i] = false;
+            movie[i].setLoopState(loopState);
             //movie[i].setPaused(false);
             if(!active_videos[i]){
                 stopVideo(i);

@@ -1,5 +1,5 @@
 #!/bin/python
-#/Users/sorenkjaergaard/Desktop/VideoKeyboard/dev/videoKeyboard2/bin/sets
+#/Applications/VideoKeyboard/videoKeyboard2/bin/sets/
 
 from os import listdir, mkdir,rmdir, symlink, remove, rename, system, pardir
 from os.path import isdir, isfile, join, getsize, abspath, isabs,realpath, basename,splitext,exists
@@ -397,7 +397,7 @@ class MyWindow(Gtk.Window):
         response = self.askForConfirmation("Change default set","Are you sure you want to change the default set?")
         if response:
             # update filesystem
-            remove(join(self.setsDir,"../data"))
+            # remove(join(self.setsDir,"../data"))
             symlink(join(self.setsDir,self.sets[int(path)]), join(self.setsDir,"../data"))
             # update GUI
             for i,row in enumerate(self.setListStore):
