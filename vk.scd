@@ -137,7 +137,7 @@ s.waitForBoot{
 		vk.loadMidiMappings(File.realpath(path+/+".."));
 		vk.initMIDI;
 
-		OSCdef(\vkRemoveDeadNodes,{|msg| var node = vk.node.selectIndex{|no| no.nodeID == msg[1]}.first; if(node.notNil){vk.node.removeAt(node)} },"/n_end"};
+		OSCdef(\vkRemoveDeadNodes,{|msg| var node = vk.node.selectIndex{|no| no.nodeID == msg[1]}.first; if(node.notNil){vk.node.removeAt(node)} },"/n_end");
 
 
 	};
@@ -560,7 +560,7 @@ s.waitForBoot{
 
 
 
-	~vk.init("/home/giano/projects/soren/videoKeyboardHap/bin/data/");
+	~vk.init("/Applications/VideoKeyboard/videoKeyboard2/bin/data/");
 }
 )
 
