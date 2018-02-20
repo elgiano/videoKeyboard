@@ -13,24 +13,28 @@
 // AUTOPLAY
 // DECAY
 
-
-
-
 (
+s.options.outDevice_("Quartet");
+s.options.sampleRate_(48000);
 s.waitForBoot{
 	SynthDef(\vkSampler){|buf,speed=1,t_reset=0,start=0,gate=1,fade_out=0,amp=1,stutterDur=1,stutter=0,t_latchPos=0,stutterPos=0,loop=1|
-		var reset = Select.kr(stutter>0,[0,TDuty.kr(stutterDur,Changed.kr(stutter))]);
-		var latchStart = Latch.ar(LocalIn.ar(1),t_latchPos);
-		var startPos = Select.kr(stutterPos>0,[start,latchStart]);
-		var end = Select.kr(stutter>0,[BufSamples.ir(buf),stutterDur*BufSampleRate.ir(buf)+startPos]);
-		var pos = Phasor.ar(t_reset,BufRateScale.kr(buf)*speed,startPos,end,startPos);
-		var rd = BufRd.ar(2,buf,pos,loop);
+		var fbPos = LocalIn.ar(1);
+
+		var latchStart = Latch.ar(fbPos,t_latchPos);
+		var startPos = Select.kr(stutter>0,[start,latchStart-(stutterDur*BufSampleRate.ir(buf))]).clip(0,BufSamples.kr(buf));
+		var end = Select.kr(stutter>0,[BufSamples.ir(buf),latchStart]).clip(0,BufSamples.kr(buf));
+
+		var reset = Select.kr(stutter>0,[0,fbPos>=end + fbPos < startPos ]);
+
+
+		var pos = Phasor.ar(t_reset + reset,BufRateScale.kr(buf)*speed,startPos,end,startPos);
+		var rd = BufRd.ar(2,buf,pos,loop,4);
 		LocalOut.ar(pos);
 		Out.ar(0,
 			//PlayBuf.ar(2,buf,speed,reset+t_reset,start,1)
 			rd
 			//LoopBuf.ar(2,buf,speed,t_reset,startPos,startPos,end)
-			*EnvGen.kr(Env.asr(0.05,1,fade_out.clip(0.05,10)),gate*(1-Done.kr(rd)),doneAction:2)*amp
+			*EnvGen.kr(Env.asr(0.02,1,fade_out.clip(0.05,10)),gate*(1-Done.kr(rd)),doneAction:2)*amp
 		);
 	}.add;
 
@@ -42,6 +46,10 @@ s.waitForBoot{
 		\global_speed:{|val| ~vk.changeAllSpeed(val) },
 		\speed_reverse:{|val| ~vk.speed_reverse = val!=0;~vk.changeAllSpeed(-1) },
 		\global_volume:{|val| ~vk.changeAllVolume(val)},
+
+		\scramble_audio:{|val| ~vk.scrambleAudio = val!=0;  ~vk.scrambleSamples() },
+
+		\mute:{|val| if(val!=0){s.unmute}{s.mute}},
 
 
 		\sustain:{|val|
@@ -73,7 +81,12 @@ s.waitForBoot{
 		\dynamics_volume:{|val| ~vk.dynIsVolume = val!=0},
 		\ribattutoSpeed:{|val| ~vk.ribattuto_speed = val!=0; ~vk.updateAllSpeeds();},
 
-		\stutter_mode:{|val| ~vk.stutterDurGlobal = linlin(val,0,1,0.04,7); ~vk.setAllStutter(false,true)},
+		\speed_curve:{|val| ~vk.speedCurve = val.linlin(0,1,-10,10);},
+		\speed_range:{|val| ~vk.speedRange = val.linlin(0,1,1,10);},
+
+
+
+		\stutter_mode:{|val| ~vk.stutterDurGlobal = linlin(val,0,1,0.01,1); ~vk.setAllStutter(false,true)},
 		\stutter_dur_global:{|val| ~vk.stutterDurGlobal = val/2; ~vk.setAllStutter(false,true)},
 		\harmonic_loops:{|val| ~vk.harmonic_loops = val!=0; if(~vk.harmonicLoops){~vk.setAllStutter(false)}},
 		\harmonic_loop_base_dur:{|val| ~vk.harmonicLoopBaseDur = val*10; if(~vk.harmonicLoops){~vk.setAllStutter(false,true)}},
@@ -84,6 +97,10 @@ s.waitForBoot{
 		\switch_to_set_3:{|val| ~vk.loadSet(3)},
 		\switch_to_set_4:{|val| ~vk.loadSet(4)},
 		\switch_to_set_5:{|val| ~vk.loadSet(5)},
+		\switch_to_set_6:{|val| ~vk.loadSet(6)},
+		\switch_to_set_7:{|val| ~vk.loadSet(7)},
+		\switch_to_set_8:{|val| ~vk.loadSet(8)},
+		\switch_to_set_9:{|val| ~vk.loadSet(9)}
 
 	);
 
@@ -95,6 +112,8 @@ s.waitForBoot{
 		vk.activeSet = 0;
 		vk.loadedSets = 0;
 		vk.setStart = [0];
+
+		vk.scrambleAudio = false;
 
 		vk.sustain = false;
 		vk.sustainedVideos = Order();
@@ -118,6 +137,9 @@ s.waitForBoot{
 		vk.dynIsVolume = false;
 		vk.dynIsDecaying = false;
 		vk.dynIsSpeed = false;
+		vk.speedCurve = 3;
+				vk.speedRange = 5;
+
 
 
 		vk.stutterDurGlobal = 1;
@@ -127,6 +149,9 @@ s.waitForBoot{
 		vk.loop_mode = true;
 
 		vk.samples = Order();
+
+		vk.scrambledSamples = Order();
+
 		vk.info = Order(); // speed, volume
 		vk.node = Order();
 		vk.loadConf(path);
@@ -137,7 +162,9 @@ s.waitForBoot{
 		vk.loadMidiMappings(File.realpath(path+/+".."));
 		vk.initMIDI;
 
-		OSCdef(\vkRemoveDeadNodes,{|msg| var node = vk.node.selectIndex{|no| no.nodeID == msg[1]}.first; if(node.notNil){vk.node.removeAt(node)} },"/n_end");
+		vk.scrambleSamples();
+
+		OSCdef(\vkRemoveDeadNodes,{|msg| var node = vk.node.selectIndices{|no| no.nodeID == msg[1]}.first; if(node.notNil){vk.node.removeAt(node)} },"/n_end");
 
 
 	};
@@ -312,14 +339,23 @@ s.waitForBoot{
 		}
 	};
 
+	~vk.dynToSpeed = {|vk,key|
+
+		//3**(vk.info[key][\dyn].linlin(0,1,-2,2))
+		ControlSpec(1/vk.speedRange,vk.speedRange,vk.speedCurve).map(vk.info[key][\dyn]);
+
+	};
+
+
 	~vk.updateSampleSpeed = {|vk,key|
 		if(vk.info[key]!=nil){
 			if(vk.info[key][\active]){
 				vk.node[key].set(\speed,
 					(vk.masterSpeed*
-						if(vk.dynIsSpeed){3**(vk.info[key][\dyn].linlin(0,1,-2,2))}{1}*
+						if(vk.dynIsSpeed){vk.dynToSpeed(key)}{1}*
 						if(vk.ribattuto_speed){vk.info[key][\tapSpeed].postln}{1}).postln
 				);
+
 			}
 		}
 	};
@@ -424,7 +460,7 @@ s.waitForBoot{
 		if(vk.sostenutoIsFreeze){
 			vk.setSostenutoFreeze(val);
 		}{
-			vk.sostenuto = val>0;
+			vk.sostenuto = val==1;
 			if(vk.sostenuto){vk.startSostenuto();}{vk.stopSostenuto();};
 		}
 	};
@@ -438,7 +474,7 @@ s.waitForBoot{
 	};
 	~vk.setSostenutoFreeze = {|vk,val|
 		if(vk.sostenutoFreezeInhibit){vk.setSostenuto(val)}{
-			vk.sostenutoFreeze = val>0;
+			vk.sostenutoFreeze = val==1;
 			if(vk.sostenutoFreeze){vk.startSostenutoFreeze();}{vk.stopSostenutoFreeze();};
 		}
 	};
@@ -446,6 +482,7 @@ s.waitForBoot{
 		vk.info.keysValuesDo{|k,v| if(vk.info[k][\active]){vk.sostenutoFreezeVideos[k]=true;vk.setSampleStutter(k,true,false);};};
 	};
 	~vk.stopSostenutoFreeze = {|vk|
+		"stop sf".postln;
 		vk.sostenutoFreezeVideos.keysValuesDo{|k,v| if(v){vk.sostenutoFreezeVideos[k]=false;vk.setSampleStutter(k,true,false);if(vk.info[k][\active].not){vk.stopSample(k)}};};
 	};
 
@@ -508,10 +545,11 @@ s.waitForBoot{
 			if(vk.dynIsVolume){vk.updateSampleVolume(key)};
 
 			if(vk.info[key][\active].not || vk.node[key].isPlaying.not){
+				var sampleKey = if(vk.scrambleAudio){vk.scrambledSamples[key]}{key};
 				if(setActive){vk.info[key][\active] = true;};
 				// start playing
 				if(vk.node[key].notNil){vk.node[key].free};
-				vk.node[key] = Synth(\vkSampler,[\buf,vk.samples[key],\fade_out,if(vk.fade_switch){vk.fadeOut}{0},\loop,vk.loop_mode]);
+				vk.node[key] = Synth(\vkSampler,[\buf,vk.samples[sampleKey],\fade_out,if(vk.fade_switch){vk.fadeOut}{0},\loop,vk.loop_mode]);
 				NodeWatcher.register(vk.node[key]);
 				vk.updateSampleSpeed(key);
 				vk.updateSampleVolume(key);
@@ -558,6 +596,15 @@ s.waitForBoot{
 		}
 	};
 
+	~vk.scrambleSamples ={|vk|
+
+		var scrambled = vk.samples.indices.asArray.scramble;
+		vk.scrambledSamples = Order();
+		vk.samples.indices.do{|i,n|
+			vk.scrambledSamples[i] = scrambled[n];
+		};
+
+	};
 
 
 	~vk.init("/Applications/VideoKeyboard/videoKeyboard2/bin/data/");
@@ -585,6 +632,9 @@ numBuffers
 s.cachedBuffersDo{|sa|sa.free}
 338 - ~vk.samples.size
 
-~vk.stopSample(39)
+~vk.playSample(89)
+~vk.changeAllSpeed(0.2)
+
+~vk.stopSample(89)
 
 s.cachedBufferAt(29).duration

@@ -533,6 +533,7 @@ void ofApp::update(){
                 captureFromKey(i).update();
             }else{
               if(dynIsSpeed){
+                cout << "dynspeed " << dynToSpeed(i) << endl;
                 movie[i].setSpeed(speed*dynToSpeed(i)*(ribattutoSpeed?tapSpeed[i]:1));
               }else{
                 movie[i].setSpeed(speed*(ribattutoSpeed?tapSpeed[i]:1));
@@ -544,11 +545,20 @@ void ofApp::update(){
 (movie[i].getPosition() > (stutterStart[i]+(stutterDur[i]*stutterDurGlobal/movie[i].getDuration())))
                        or (movie[i].getPosition() < stutterStart[i])
                        ){*/
-                       (movie[i].getPosition() < (stutterStart[i]-(stutterDur[i]*stutterDurGlobal/movie[i].getDuration())))
-                       or (movie[i].getPosition() >= stutterStart[i])
+                       (movie[i].getPosition() < ofClamp(stutterStart[i]-stutterDurGlobal/movie[i].getDuration(),0,1))
+                       or (movie[i].getPosition() > stutterStart[i])
                        ){
-                        cout << "stuttering " << i << endl;
-                        movie[i].setPosition(stutterStart[i]-(stutterDur[i]*stutterDurGlobal/movie[i].getDuration()));
+                        cout <<  "stuttering " << i << " " << movie[i].getPosition() << endl;
+                        cout  << ofClamp(stutterStart[i]-stutterDurGlobal/movie[i].getDuration(),0,1) << " " << stutterStart[i]  << endl;
+
+                        movie[i].setPosition(ofClamp(stutterStart[i]-stutterDurGlobal/movie[i].getDuration(),0,1));
+                        movie[i].update();
+                        while(movie[i].getPosition() < ofClamp(stutterStart[i]-stutterDurGlobal/movie[i].getDuration(),0,1)){
+                            movie[i].nextFrame();
+                            movie[i].update();
+                            cout <<  "nextframe " << i << " " << movie[i].getPosition() << endl;
+                            cout  << ofClamp(stutterStart[i]-stutterDurGlobal/movie[i].getDuration(),0,1) << " " << stutterStart[i]  << endl;
+                        }
                         // movie[i].setPosition(stutterStart[i]);
                         //movie[i].play();
                         //movie[i].setLoopState(OF_LOOP_NORMAL);
@@ -635,23 +645,27 @@ void ofApp::soundFades(int i){
 }
 
 void ofApp::setVideoVolume(int key, float vol){
-  /*if(rms_mode){
+    if(!mute){
+  if(rms_mode){
       float correction = setAvgRms[setNumberFromKey(key)]/videoRms[key];
       if(rms_global){
         correction = globalAvgRms/videoRms[key];
       }
       //correction = ofClamp(correction,0.1,10);
       correction = 1+((correction-1)*rms_correction_pct);
-    movie[key].setVolume(vol*volume*videoVolume[key]*correction);*/
+    movie[key].setVolume(vol*volume*videoVolume[key]*correction);
       /*cout << "#"<<key<< " volume " << vol*volume*videoVolume[key]*setAvgRms[setNumberFromKey(key)]/videoRms[key] <<  " correction " << videoRms[key] << endl;
       cout << "set " << setNumberFromKey(key) << " avg: " << setAvgRms[setNumberFromKey(key)] << endl;*/
       //cout << "vol " << vol*volume*videoVolume[key]*correction << endl;
-  /*}else{
+  }else{
     movie[key].setVolume(vol*volume*videoVolume[key]);
       //cout << "vol " << vol*volume*videoVolume[key] << endl;
 
-  }*/
-  movie[key].setVolume(0);
+  }
+        
+    }else{
+        movie[key].setVolume(0);
+    }
 
 
 }
@@ -690,7 +704,8 @@ void ofApp::playVideo(int key, float vel){
     if(!active_videos[key]){
       active_videos[key] = true;
       reset_videos[key] = true;
-      soundFader[key]->startThread();
+        soundFader[key]->startThread();
+        //if(!mute){soundFader[key]->startThread();}{setVideoVolume(key,0);};
       n_activeVideos++;
     }else if(sustain>0 && ribattutoSpeed){
       // if video is already active and sustain is on (tapping)
@@ -788,7 +803,18 @@ float ofApp::dynToSpeed(int movieN){
       dyn[movieN] *= dynDecay;
   }*/
   //cout <<dyn[movieN]<<endl;
-  return pow(3,ofMap(dyn[movieN],0,1,-2,2));
+    float min = 1/speedRange;
+    float max = speedRange;
+    
+    float a = (max-min)/(1.0-exp(speedCurve));
+    
+    cout <<"range " << speedRange<<endl;
+    cout <<"curve " << speedCurve<<endl;
+
+    cout <<"dyn " << dyn[movieN]<<endl;
+
+    return min + a - (a * pow(exp(speedCurve),dyn[movieN]));
+    //return pow(3,ofMap(dyn[movieN],0,1,-2,2));
 }
 
 void ofApp::decayDyn(){

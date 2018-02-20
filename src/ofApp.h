@@ -54,7 +54,11 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 
 		float dynDecay = 0.98;
 		float dynToSpeed(int movieN);
+        float speedCurve = 3;
+        float speedRange = 5;
 		void decayDyn();
+    
+        bool mute = false;
 
 		ofLoopType loopState = OF_LOOP_NORMAL;
 
