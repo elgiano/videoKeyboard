@@ -1,9 +1,9 @@
-#!/bin/python
+#!/Library/Frameworks/Python.framework/Versions/3.6/bin/python3
 #/Applications/VideoKeyboard/videoKeyboard2/bin/sets/
 
 from os import listdir, mkdir,rmdir, symlink, remove, rename, system, pardir
 from os.path import isdir, isfile, join, getsize, abspath, isabs,realpath, basename,splitext,exists
-from shutil import copytree
+from shutil import copytree, rmtree
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk,Gdk,GObject
@@ -29,6 +29,14 @@ def extractAudioGroup(path):
         print("Can't find any file! (ext: "+allowExt+")");
         return
     else:
+        audiopath = abspath(join(path,"audio"))
+        if not exists(audiopath):
+            try:
+                mkdir(audiopath)
+            except:
+                print("folder already existed")
+        else:
+            rmtree(audiopath)
         pool = ThreadPool(4)
         results = pool.map(extractAudio, dirs)
         pool.close()
@@ -397,7 +405,7 @@ class MyWindow(Gtk.Window):
         response = self.askForConfirmation("Change default set","Are you sure you want to change the default set?")
         if response:
             # update filesystem
-            # remove(join(self.setsDir,"../data"))
+            remove(join(self.setsDir,"../data"))
             symlink(join(self.setsDir,self.sets[int(path)]), join(self.setsDir,"../data"))
             # update GUI
             for i,row in enumerate(self.setListStore):
@@ -825,9 +833,9 @@ class MyWindow(Gtk.Window):
                     size = group["size"]
                 else:
                     if(isabs(group["src"])):
-                        size = len([f for f in listdir(group["src"]) if isfile(join(group["src"],f))])
+                        size = len([f for f in listdir(group["src"]) if isfile(join(group["src"],f) and splitext(f)[1] == ".mov")])
                     else:
-                        size = len([f for f in listdir(join(path,group["src"])) if isfile(join(join(path,group["src"]),f))])
+                        size = len([f for f in listdir(join(path,group["src"])) if isfile(join(join(path,group["src"]),f)) and splitext(f)[1] == ".mov"])
 
             autoplay = False
             if "autoplay" in group:
@@ -1214,7 +1222,7 @@ class MyWindow(Gtk.Window):
     def updateVideoCount(self):
         if self.selectedSourceConf()["type"]=="random":
             self.groupsListStore[self.selectedGroup][3] = self.selectedSourceConf()["size"]
-        self.groupsListStore[self.selectedGroup][3] = len(self.videoListStore)
+        self.groupsListStore[self.selectedGroup][3] = len(self.videoListStore)-1
         self.updateGroupsMIDI()
 
     def updateGroupsMIDI(self):

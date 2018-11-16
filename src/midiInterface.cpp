@@ -192,11 +192,23 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
                 setLoopState(OF_LOOP_NONE);
               };
               break;
+              case MidiCommand::presentationMode:
+                  presentationMode = msg.value!=0;
+                  if(!presentationMode){stopSostenuto();};
+                  cout << "presMode " << presentationMode << endl;
+                  break;
               case MidiCommand::speed_dynamics:
-                  cout << "dynIsSpeed" << endl;
                       dynIsSpeed = msg.value!=0;
                       cout << "dynIsSpeed " << dynIsSpeed << endl;
                       break;
+              case MidiCommand::speed_curve:
+                  speedCurve = ofMap((float)msg.value/midiMaxVal,0,1,-10,10);
+                  cout << "speedcurve " << speedCurve << endl;
+                  break;
+              case MidiCommand::speed_range:
+                  speedRange = ofMap((float)msg.value/midiMaxVal,0,1,1,10);
+                  cout << "speedRange " << speedRange << endl;
+                  break;
               case MidiCommand::layout_shuffle:
                       layoutShuffle = msg.value!=0;
                       cout << "layout shuffle " <<layoutShuffle << endl;
@@ -224,7 +236,7 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
                   break;
               case MidiCommand::stutter_mode:
                   //stutterMode = !stutterMode;
-                  stutterDurGlobal = ofMap((float)msg.value/midiMaxVal,0,1,0.04,7);
+                  stutterDurGlobal = ofMap((float)msg.value/midiMaxVal,0,1,0.01,1);
                   //stutterMode = (stutterDurGlobal>0);
                   cout << "stutter_mode:" << stutterMode << endl;
                   cout << "sdg:" << stutterDurGlobal << endl;
@@ -352,6 +364,10 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
                   black_screen = (int)round((1-pow(1-(float)msg.value/midiMaxVal,2))*255);
                   //black_screen = (int)round((1-pow(10,-1*(float)msg.value/midiMaxVal))*255);
                   cout << "black_screen:" << black_screen << endl;
+                  break;
+              case MidiCommand::mute:
+                  mute = msg.value!=0;
+                  cout << "mute "<< mute << endl;
                   break;
           }
       midiMaxVal = 127; // reset maxVal to control

@@ -70,7 +70,11 @@ enum class MidiCommand {
         blending_add_switch,
         black_screen,
     sostenuto_freeze_inhibit,
-    sostenuto_is_freeze
+    sostenuto_is_freeze,
+    speed_curve,
+    speed_range,
+    mute,
+    presentationMode
 };
 
 
@@ -156,6 +160,10 @@ class Config {
        {"black_screen", MidiCommand::black_screen},
           {"sostenuto_freeze_inhibit", MidiCommand::sostenuto_freeze_inhibit},
           {"sostenuto_is_freeze", MidiCommand::sostenuto_is_freeze},
+          {"speed_curve", MidiCommand::speed_curve},
+          {"speed_range", MidiCommand::speed_range},
+          {"mute", MidiCommand::mute},
+          {"presentationMode", MidiCommand::presentationMode},
 
 
 

@@ -54,7 +54,12 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 
 		float dynDecay = 0.98;
 		float dynToSpeed(int movieN);
+        float speedCurve = 3;
+        float speedRange = 5;
 		void decayDyn();
+    
+        bool mute = false;
+    bool presentationMode = false;
 
 		ofLoopType loopState = OF_LOOP_NORMAL;
 
@@ -158,6 +163,10 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		// for multiply blending:
 		// register if layoutPos has been initialized (has already a texture)
 		int thisLayoutInit[MAX_LAYOUTPOS];
+    
+    int layout_count_temp = 0 ;
+    int layout_init_temp = 0 ;
+
 
 		int screenW;
 		int screenH;

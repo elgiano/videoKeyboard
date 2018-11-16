@@ -319,7 +319,7 @@ void ofApp::drawVideoInLayout(int movieN){
 
   // read layout position
   int layoutPos=0;
-  int thisLayout = layout_for_video[movieN];
+  /*int thisLayout = layout_for_video[movieN];
     if(layoutShuffle){
         thisLayout = movieN % settings.n_layoutConfs;
     }
@@ -327,7 +327,7 @@ void ofApp::drawVideoInLayout(int movieN){
     layoutPos = settings.layoutConf[thisLayout][abs(layout)-1];
   }else if(layout<0){
     layoutPos = abs(settings.layoutConf[thisLayout][abs(layout)-1]-1);
-  }
+  }*/
 
   if(blending_multiply){
 
@@ -343,12 +343,15 @@ void ofApp::drawVideoInLayout(int movieN){
     // alpha blending:
     ofEnableAlphaBlending();
     // logarithmic layering * fade_in_transparency * fade_out_transparency * dynamic level
-    videoColor.set(255,255,255,255/log2(layoutCount[abs(layout)][layoutPos]+2)*fi_alpha*fo_alpha*thisDyn);
+    //videoColor.set(255,255,255,255/log2(layoutCount[abs(layout)][layoutPos]+2)*fi_alpha*fo_alpha*thisDyn);
+      
+      videoColor.set(255,255,255,255/log2(layout_count_temp+2)*fi_alpha*fo_alpha*thisDyn);
+
   }
   //videoColor.setSaturation(saturation);
   ofSetColor(videoColor);
 
-
+    
     ofTexture thisTexture;
     if(isCaptureKey(movieN)){
         thisTexture.loadData(captureFromKey(movieN).getPixels());
@@ -356,14 +359,32 @@ void ofApp::drawVideoInLayout(int movieN){
         h = captureFromKey(movieN).getHeight();
     }else{
         thisTexture = *movie[movieN].getTexture();
-        w = movie[movieN].getWidth();
-        h = movie[movieN].getHeight();
+        //w = movie[movieN].getWidth();
+        //h = movie[movieN].getHeight();
     }
 
-    //thisTexture = adjustBrightness(movie[movieN].getPixels(),w,h);
+    
+    // temp: disable layouts
+    
+    if( (blending_multiply || blending_add )&& layout_init_temp++==0){
+        //drawWhiteBg(0,(screenH-(screenW*h/w))/2, screenW, screenW*h/w);
+        drawWhiteBg(0,0, screenW, screenH);
+    }
+    //thisTexture.draw(0,(screenH-(screenW*h/w))/2, screenW, screenW*h/w);
+    //thisTexture.draw(0,0, screenW, screenH);
+    if(w/h > 1.0*screenW/screenH){
+        thisTexture.drawSubsection(0,0, screenW, screenH,
+                                   (w-h*screenW/screenH)/2,0,
+                                   h*screenW/screenH,h);
+    }else{
+        thisTexture.drawSubsection(0,0, screenW, screenH,
+                                   0,(h-w*screenH/screenW)/2,
+                                   w,w*screenH/screenW);
+    }
 
+    
   // actual drawing in layout
-  switch(abs(layout)){
+  /*switch(abs(layout)){
     case 0:
           if( (blending_multiply || blending_add )&& thisLayoutInit[layoutPos]++==0){
               drawWhiteBg(0,(screenH-(screenW*h/w))/2, screenW, screenW*h/w);
@@ -435,7 +456,7 @@ void ofApp::drawVideoInLayout(int movieN){
                            (screenH/2*(layoutPos/2%2))+(screenH/2-(screenW/2*h/w))/2,
                            screenW/2, screenH/2,
                            w*((1-(screenW/screenH))/2),0,
-                           w*(screenW/screenH),h);
+                           w*(screenW/screenH),h);*/
 
 
           /*if(blending_multiply){drawBrightnessLayer(screenW/2*(layoutPos%2),
@@ -444,7 +465,7 @@ void ofApp::drawVideoInLayout(int movieN){
 }*/
 
 
-  }
+  //}
 
 
 }
@@ -481,7 +502,16 @@ ofTexture ofApp::adjustBrightness(ofPixels pix,int w, int h){
 //--------------------------------------------------------------
 void ofApp::draw(){
 
-  updateLayoutCount();
+  //updateLayoutCount();
+  layout_count_temp = 0;
+    layout_init_temp = 0;
+
+  for(int i=0;i<MAX_VIDEOS;i++){
+        if(active_videos[i] or sostenuto_videos[i] or sostenutoFreeze_videos[i]){
+            layout_count_temp += 1;
+        }
+  };
+  
 
   // draw videos
   for(int i=0;i<MAX_VIDEOS;i++){
@@ -512,6 +542,9 @@ void ofApp::updateLayoutCount(){
   }};
 }
 
+
+
+
 //--------------------------------------------------------------
 void ofApp::update(){
   if(dynIsDecaying && ofGetElapsedTimef()-lastDecayTime>0.1){
@@ -533,6 +566,7 @@ void ofApp::update(){
                 captureFromKey(i).update();
             }else{
               if(dynIsSpeed){
+                cout << "dynspeed " << dynToSpeed(i) << endl;
                 movie[i].setSpeed(speed*dynToSpeed(i)*(ribattutoSpeed?tapSpeed[i]:1));
               }else{
                 movie[i].setSpeed(speed*(ribattutoSpeed?tapSpeed[i]:1));
@@ -544,11 +578,20 @@ void ofApp::update(){
 (movie[i].getPosition() > (stutterStart[i]+(stutterDur[i]*stutterDurGlobal/movie[i].getDuration())))
                        or (movie[i].getPosition() < stutterStart[i])
                        ){*/
-                       (movie[i].getPosition() < (stutterStart[i]-(stutterDur[i]*stutterDurGlobal/movie[i].getDuration())))
-                       or (movie[i].getPosition() >= stutterStart[i])
+                       (movie[i].getPosition() < ofClamp(stutterStart[i]-stutterDurGlobal/movie[i].getDuration(),0,1))
+                       or (movie[i].getPosition() > stutterStart[i])
                        ){
-                        cout << "stuttering " << i << endl;
-                        movie[i].setPosition(stutterStart[i]-(stutterDur[i]*stutterDurGlobal/movie[i].getDuration()));
+                        cout <<  "stuttering " << i << " " << movie[i].getPosition() << endl;
+                        cout  << ofClamp(stutterStart[i]-stutterDurGlobal/movie[i].getDuration(),0,1) << " " << stutterStart[i]  << endl;
+
+                        movie[i].setPosition(ofClamp(stutterStart[i]-stutterDurGlobal/movie[i].getDuration(),0,1));
+                        movie[i].update();
+                        while(movie[i].getPosition() < ofClamp(stutterStart[i]-stutterDurGlobal/movie[i].getDuration(),0,1)){
+                            movie[i].nextFrame();
+                            movie[i].update();
+                            cout <<  "nextframe " << i << " " << movie[i].getPosition() << endl;
+                            cout  << ofClamp(stutterStart[i]-stutterDurGlobal/movie[i].getDuration(),0,1) << " " << stutterStart[i]  << endl;
+                        }
                         // movie[i].setPosition(stutterStart[i]);
                         //movie[i].play();
                         //movie[i].setLoopState(OF_LOOP_NORMAL);
@@ -635,23 +678,27 @@ void ofApp::soundFades(int i){
 }
 
 void ofApp::setVideoVolume(int key, float vol){
-  /*if(rms_mode){
+    if(!mute){
+  if(rms_mode){
       float correction = setAvgRms[setNumberFromKey(key)]/videoRms[key];
       if(rms_global){
         correction = globalAvgRms/videoRms[key];
       }
       //correction = ofClamp(correction,0.1,10);
       correction = 1+((correction-1)*rms_correction_pct);
-    movie[key].setVolume(vol*volume*videoVolume[key]*correction);*/
+    movie[key].setVolume(vol*volume*videoVolume[key]*correction);
       /*cout << "#"<<key<< " volume " << vol*volume*videoVolume[key]*setAvgRms[setNumberFromKey(key)]/videoRms[key] <<  " correction " << videoRms[key] << endl;
       cout << "set " << setNumberFromKey(key) << " avg: " << setAvgRms[setNumberFromKey(key)] << endl;*/
       //cout << "vol " << vol*volume*videoVolume[key]*correction << endl;
-  /*}else{
+  }else{
     movie[key].setVolume(vol*volume*videoVolume[key]);
       //cout << "vol " << vol*volume*videoVolume[key] << endl;
 
-  }*/
-  movie[key].setVolume(0);
+  }
+        
+    }else{
+        movie[key].setVolume(0);
+    }
 
 
 }
@@ -688,10 +735,22 @@ void ofApp::playVideo(int key, float vel){
       fi_start[key] = ofGetElapsedTimef();
 
     if(!active_videos[key]){
+        
+        if(presentationMode){
+            stopSostenuto();
+        };
+        
+        
       active_videos[key] = true;
       reset_videos[key] = true;
-      soundFader[key]->startThread();
+        soundFader[key]->startThread();
+        //if(!mute){soundFader[key]->startThread();}{setVideoVolume(key,0);};
       n_activeVideos++;
+        
+        if(presentationMode){
+            startSostenuto();
+        };
+        
     }else if(sustain>0 && ribattutoSpeed){
       // if video is already active and sustain is on (tapping)
       float now = ofGetElapsedTimef();
@@ -788,7 +847,18 @@ float ofApp::dynToSpeed(int movieN){
       dyn[movieN] *= dynDecay;
   }*/
   //cout <<dyn[movieN]<<endl;
-  return pow(3,ofMap(dyn[movieN],0,1,-2,2));
+    float min = 1/speedRange;
+    float max = speedRange;
+    
+    float a = (max-min)/(1.0-exp(speedCurve));
+    
+    cout <<"range " << speedRange<<endl;
+    cout <<"curve " << speedCurve<<endl;
+
+    cout <<"dyn " << dyn[movieN]<<endl;
+
+    return min + a - (a * pow(exp(speedCurve),dyn[movieN]));
+    //return pow(3,ofMap(dyn[movieN],0,1,-2,2));
 }
 
 void ofApp::decayDyn(){
