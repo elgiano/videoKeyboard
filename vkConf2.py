@@ -55,7 +55,13 @@ def extractAudio(path):
     #path = path.replace(" ","\ ")
     sfpath = join(audiopath,basename(path))+".wav"
 
-    system("ffmpeg -y -i '"+path+"' -map 0:a '"+sfpath+"'")
+    exitCode = system("ffmpeg -y -i '"+path+"' -map 0:a '"+sfpath+"' -loglevel error")
+
+    if exitCode!=0:
+        system("ffmpeg -y -i '"+path+"' -f lavfi -i anullsrc=cl=1 -shortest -c:v copy -c:a copy '"+sfpath+".mov' -loglevel error")
+        system("ffmpeg -y -i '"+sfpath+".mov' -map 0:a '"+sfpath+"' -loglevel error")
+        system("rm '"+sfpath+".mov'")
+
 
     return(path)
 
