@@ -1,5 +1,5 @@
 #!/Library/Frameworks/Python.framework/Versions/3.6/bin/python3
-#/Users/gnlcelia/dev/videoKeyboard/bin/sets
+#/Applications/VideoKeyboard/videoKeyboardText/bin/sets
 
 from os import listdir, mkdir,rmdir, symlink, remove, rename, system, pardir
 from os.path import isdir, isfile, join, getsize, abspath, isabs,realpath, basename,splitext,exists
