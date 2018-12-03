@@ -7,7 +7,7 @@
 #include "ofxMidi.h"
 #include "ofxJsonSettings.h"
 #include "ofxHapPlayer.h"
-
+#include "movieContainer.hpp"
 #include "config.h"
 
 #define MAX_VIDEOS 1056
@@ -23,7 +23,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 
 	public:
 		Config settings;
-		ofxHapPlayer  movie[MAX_VIDEOS];
+		MovieContainer  movie[MAX_VIDEOS];
 		int layout_for_video[MAX_VIDEOS];
 		int n_layouts;
 		int layout;

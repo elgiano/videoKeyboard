@@ -186,6 +186,8 @@ void ofApp::loadSourceGroup(string path,int layout){
     cout << "loading source group " << path << endl;
     ofDirectory subdir(path);
     subdir.allowExt("mov");
+    subdir.allowExt("txt");
+
     subdir.listDir();
     subdir.sort();
     int tot_videos = subdir.size();
@@ -256,7 +258,8 @@ void ofApp::loadSet(int set_n){
     }
   }
 
-  activeSet = set_n%loadedSets;
+  activeSet = set_n;
+  if(loadedSets>0)  activeSet = set_n%loadedSets;
 
   for(auto autoplay : autoplayGroupsForSet[activeSet]){
     cout << "autoplay " << endl;
@@ -366,10 +369,33 @@ void ofApp::drawVideoInLayout(int movieN){
     
     // temp: disable layouts
     
-    if( (blending_multiply || blending_add )&& layout_init_temp++==0){
-        //drawWhiteBg(0,(screenH-(screenW*h/w))/2, screenW, screenW*h/w);
-        drawWhiteBg(0,0, screenW, screenH);
-    }
+  
+    
+    
+    
+    if(movie[movieN].contentType==MovieType::txt){
+        ofEnableAlphaBlending();
+        if(blending_multiply){
+            //movie[movieN].setColor(ofColor(0,0,0,255));
+            //ofSetColor(0,0,0,255);
+
+        }else if( blending_add ){
+            //drawWhiteBg(0,0, screenW, screenH);
+            ofSetColor(0,0,0,255);
+
+        }else{
+            movie[movieN].setColor(ofColor(255,255,255,255));
+
+            ofSetColor(255,255,255,255);
+        }
+        //ofSetColor(255,255,255,255);
+        thisTexture.draw(0,0);
+    }else{
+        
+        if( (blending_multiply || blending_add )&& layout_init_temp++==0){
+            //drawWhiteBg(0,(screenH-(screenW*h/w))/2, screenW, screenW*h/w);
+            drawWhiteBg(0,0, screenW, screenH);
+        }
     //thisTexture.draw(0,(screenH-(screenW*h/w))/2, screenW, screenW*h/w);
     //thisTexture.draw(0,0, screenW, screenH);
     if(w/h > 1.0*screenW/screenH){
@@ -380,6 +406,7 @@ void ofApp::drawVideoInLayout(int movieN){
         thisTexture.drawSubsection(0,0, screenW, screenH,
                                    0,(h-w*screenH/screenW)/2,
                                    w,w*screenH/screenW);
+    }
     }
 
     
@@ -515,11 +542,21 @@ void ofApp::draw(){
 
   // draw videos
   for(int i=0;i<MAX_VIDEOS;i++){
-    if(active_videos[i] or sostenuto_videos[i] or sostenutoFreeze_videos[i]){
+      if(active_videos[i] or sostenuto_videos[i] or sostenutoFreeze_videos[i]){
       /*movie[i].setLoopState(loopState);
       cout << movie[i].getLoopState() << endl;*/
-      drawVideoInLayout(i);
+      if( movie[i].contentType == MovieType::hap) drawVideoInLayout(i);
 
+    }
+      
+  }
+    for(int i=0;i<MAX_VIDEOS;i++){
+
+    if(active_videos[i] or sostenuto_videos[i] or sostenutoFreeze_videos[i]){
+        /*movie[i].setLoopState(loopState);
+         cout << movie[i].getLoopState() << endl;*/
+        if( movie[i].contentType == MovieType::txt) drawVideoInLayout(i);
+        
     }
   }
   if(black_screen>0){
