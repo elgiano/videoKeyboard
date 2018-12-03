@@ -42,3 +42,12 @@ addons.make
 *.make
 Makefile
 midi_mappings.json
+*.DS_Store*
+.DS_Store
+videoKeyboard2.xcodeproj/xcuserdata/gnlcelia.xcuserdatad/xcschemes/xcschememanagement.plist
+videoKeyboard2.xcodeproj/project.xcworkspace/xcuserdata/gnlcelia.xcuserdatad/UserInterfaceState.xcuserstate
+videoKeyboard.xcodeproj/xcuserdata/gnlcelia.xcuserdatad/xcschemes/xcschememanagement.plist
+videoKeyboard.xcodeproj/xcuserdata/gnlcelia.xcuserdatad/xcdebugger/Breakpoints_v2.xcbkptlist
+videoKeyboard.xcodeproj/project.xcworkspace/xcuserdata/gnlcelia.xcuserdatad/UserInterfaceState.xcuserstate
+videoKeyboard.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+videoKeyboard2.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist

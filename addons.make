@@ -1,4 +1,4 @@
-ofxMidi
 ofxHapPlayer
-ofxJsonSettings
 ofxJSON
+ofxJsonSettings
+ofxMidi

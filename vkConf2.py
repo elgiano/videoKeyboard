@@ -1,5 +1,5 @@
 #!/Library/Frameworks/Python.framework/Versions/3.6/bin/python3
-#/Applications/VideoKeyboard/videoKeyboard2/bin/sets/
+#/Users/gnlcelia/dev/videoKeyboard/bin/sets
 
 from os import listdir, mkdir,rmdir, symlink, remove, rename, system, pardir
 from os.path import isdir, isfile, join, getsize, abspath, isabs,realpath, basename,splitext,exists
@@ -21,10 +21,10 @@ import subprocess
 
 def extractAudioGroup(path):
 
-    allowExt = ".mov"
+    allowExt = [".mov",".txt"]
 
     dirs = listdir( path )
-    dirs = [join(path,f) for f in dirs if splitext(f)[1] == allowExt]
+    dirs = [join(path,f) for f in dirs if splitext(f)[1] in allowExt]
     if len(dirs) == 0 :
         print("Can't find any file! (ext: "+allowExt+")");
         return
@@ -55,12 +55,18 @@ def extractAudio(path):
     #path = path.replace(" ","\ ")
     sfpath = join(audiopath,basename(path))+".wav"
 
-    exitCode = system("ffmpeg -y -i '"+path+"' -map 0:a '"+sfpath+"' -loglevel error")
+    if(splitext(path)[1] == ".txt"):
+        size = getsize(path)/100.0
+        system("ffmpeg -y -f lavfi -i anullsrc=cl=1 -t "+str(size)+" -map 0:a '"+sfpath+"' -loglevel error")
 
-    if exitCode!=0:
-        system("ffmpeg -y -i '"+path+"' -f lavfi -i anullsrc=cl=1 -shortest -c:v copy -c:a copy '"+sfpath+".mov' -loglevel error")
-        system("ffmpeg -y -i '"+sfpath+".mov' -map 0:a '"+sfpath+"' -loglevel error")
-        system("rm '"+sfpath+".mov'")
+    else:
+
+        exitCode = system("ffmpeg -y -i '"+path+"' -map 0:a '"+sfpath+"' -loglevel error")
+
+        if exitCode!=0:
+            system("ffmpeg -y -i '"+path+"' -f lavfi -i anullsrc=cl=1 -shortest -c:v copy -c:a copy '"+sfpath+".mov' -loglevel error")
+            system("ffmpeg -y -i '"+sfpath+".mov' -map 0:a '"+sfpath+"' -loglevel error")
+            system("rm '"+sfpath+".mov'")
 
 
     return(path)
@@ -1433,8 +1439,8 @@ class MyWindow(Gtk.Window):
         btn = Gtk.Button("Analyze Volume")
         btn.connect("clicked",self.analyzeSetVolume)
         box_btnh.pack_start(btn,True,True,0)
-        btn = Gtk.Button("Fade audio")
-        btn.connect("clicked",self.fadeSetVolume)
+        # btn = Gtk.Button("Fade audio")
+        # btn.connect("clicked",self.fadeSetVolume)
         box_btnh.pack_start(btn,True,True,0)
         btn = Gtk.Button("Extract audio")
         btn.connect("clicked",self.extractSetAudio)
