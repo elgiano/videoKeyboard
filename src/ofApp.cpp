@@ -751,10 +751,14 @@ int ofApp::setNumberFromKey(int key){
 // ### CONTROL ###
 
 void ofApp::panic(){
+    sustain=0 ;
   for(int i=0;i<MAX_VIDEOS;i++){
+      sostenuto_videos[i]=false;
+      sostenutoFreeze_videos[i]=false;
     //active_videos[i] = false;
     //movie[i].stop();
-    deactivateVideo(i);
+    //deactivateVideo(i);
+      stopVideo(i);
     //movie[i].setPosition(0);
   }
 }

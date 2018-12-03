@@ -51,3 +51,12 @@ videoKeyboard.xcodeproj/xcuserdata/gnlcelia.xcuserdatad/xcdebugger/Breakpoints_v
 videoKeyboard.xcodeproj/project.xcworkspace/xcuserdata/gnlcelia.xcuserdatad/UserInterfaceState.xcuserstate
 videoKeyboard.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
 videoKeyboard2.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
+videoKeyboardText.xcodeproj/project.pbxproj
+videoKeyboardText.xcodeproj/project.xcworkspace/contents.xcworkspacedata
+videoKeyboardText.xcodeproj/project.xcworkspace/xcuserdata/sorenkjaergaard.xcuserdatad/UserInterfaceState.xcuserstate
+videoKeyboardText.xcodeproj/xcuserdata/sorenkjaergaard.xcuserdatad/xcschemes/xcschememanagement.plist
+videoKeyboardText.xcodeproj/xcuserdata/sorenkjaergaard.xcuserdatad/xcdebugger/Breakpoints_v2.xcbkptlist
+.DS_Store
+bin
+bin/defaultConf.json
+bin/defaultConf.json

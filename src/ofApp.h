@@ -58,7 +58,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
         float speedRange = 5;
 		void decayDyn();
     
-        bool mute = false;
+        bool mute = true;
     bool presentationMode = false;
 
 		ofLoopType loopState = OF_LOOP_NORMAL;

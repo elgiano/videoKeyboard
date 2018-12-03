@@ -102,7 +102,14 @@ s.waitForBoot{
 		\switch_to_set_6:{|val| ~vk.loadSet(6)},
 		\switch_to_set_7:{|val| ~vk.loadSet(7)},
 		\switch_to_set_8:{|val| ~vk.loadSet(8)},
-		\switch_to_set_9:{|val| ~vk.loadSet(9)}
+		\switch_to_set_9:{|val| ~vk.loadSet(9)},
+		\switch_to_set_10:{|val| ~vk.loadSet(10)},
+
+
+		\soundOffset:{|val| ~vk.setSoundOffset(val>0)},
+
+		\panic: {~vk.panic()}
+
 
 	);
 
@@ -143,6 +150,8 @@ s.waitForBoot{
 		vk.dynIsSpeed = false;
 		vk.speedCurve = 3;
 				vk.speedRange = 5;
+
+		vk.soundSetOffset = 0;
 
 
 
@@ -534,6 +543,9 @@ s.waitForBoot{
 		stopVideo(autoplay[0]+1);
 		}
 		}*/
+
+		set_n = set_n + vk.soundSetOffset;
+
 		"loading set %\n".postf(set_n%vk.loadedSets);
 		vk.activeSet = set_n%vk.loadedSets;
 
@@ -543,6 +555,34 @@ s.waitForBoot{
 		playVideo(autoplay[0]+1,1.0);
 		}
 		}*/
+	};
+
+	~vk.setSoundOffset={|vk,offset|
+
+		if(offset ){
+			vk.soundSetOffset = 1;
+			vk.loadSet(vk.activeSet);
+		}{
+			var old = vk.soundSetOffset;
+			vk.soundSetOffset = 0;
+			vk.loadSet(vk.activeSet-old);
+		};
+
+		vk.translatePlayingSamplesToSet(vk.activeSet);
+
+	};
+
+	~vk.translatePlayingSamplesToSet={|vk,set|
+		vk.samples.size.do{|key|
+			if(vk.info[key][\active]){
+				var set = vk.setStart[vk.setStart.indexInBetween(key).floor];
+				var offset = key-set;
+				vk.stopSample(key);
+				vk.playSample(vk.setStart[vk.activeSet] + offset);
+			}
+		}
+
+
 	};
 
 	// play/stop
@@ -610,6 +650,17 @@ s.waitForBoot{
 				}
 
 			}
+		}
+	};
+
+	~vk.panic = {|vk|
+		"stopping all samples".postln;
+		vk.sustain = false;
+
+		vk.samples.size.do{|key|
+			vk.sostenutoVideos[key] = false;
+			 vk.sostenutoFreezeVideos[key] = false;
+			vk.stopSample(key);
 		}
 	};
 

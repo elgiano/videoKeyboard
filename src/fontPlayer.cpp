@@ -12,6 +12,7 @@ bool FontPlayer::load(std::string text,int size){
     if(!this->fbo.isAllocated()){
         this->fbo.allocate(ofGetScreenWidth(),ofGetScreenHeight(),GL_RGBA);
         this->maskFbo.allocate(ofGetScreenWidth(),ofGetScreenHeight(),GL_RGBA);
+        clearFbos();
     }
     
     this->text = text;
@@ -19,12 +20,81 @@ bool FontPlayer::load(std::string text,int size){
 
     return true;
 };
+
 bool FontPlayer::load(std::string text){
-    this->load(text,fontSize);
+    this->load(this->parseText(text),fontSize);
+};
+
+void FontPlayer::clearFbos(){
+    this->maskFbo.begin();
+    ofClear(255,255,255,0);
+    this->maskFbo.end();
+    this->fbo.begin();
+    ofClear(255,255,255,0);
+    this->fbo.end();
+}
+
+std::string FontPlayer::parseText(std::string text){
+    vector <string> lines = ofSplitString(text,"\n");
+    vector <string> txtLines;
+
+    for(auto &line: lines){
+        if(line.front() == '#'){
+            line.erase(line.begin(),line.begin()+1);
+            vector <string> values = ofSplitString(line,",");
+            for(int i=0;i<values.size();i++){
+                float value = std::stof(values[i]);
+                switch(i){
+                    case 0:
+                        if(value<0){
+                            this->margin =-value;
+                            this->xAlign = FontPlayer::Alignment::END;
+                        }else{
+                            this->margin =value;
+                            this->xAlign = FontPlayer::Alignment::START;
+                        };
+                        break;
+                    case 1:
+                        if(value<0){
+                            this->marginY =-value;
+                            this->yAlign = FontPlayer::Alignment::END;
+                        }else{
+                            this->marginY =value;
+                            this->yAlign = FontPlayer::Alignment::START;
+                        };
+                        break;
+                    case 2:
+                        this->widthRatio = value;
+                        break;
+                    case 3:
+                        this->heightRatio = value;
+                        break;
+                    case 4:
+                        if(value<0){
+                            this->marginY =-value;
+                            this->reverse = true;
+                        }else{
+                            this->lettersPerSecond = value;
+                            this->reverse = false;
+                        };
+                        break;
+                        
+                };
+                
+            }
+        }else{
+            txtLines.push_back(line);
+        }
+    }
+    
+    std::string joined = ofJoinString(txtLines,"\n");
+    
+    return joined;
+    
 };
 
 std::string FontPlayer::setFontSize(int size){
-    this->font.load("../SourceSerifPro-Black.ttf",size);
+    this->font.load("../SourceSerifPro-Regular.ttf",size);
     fontSize = size;
     return this->wrappedText = this->wrapText();
 
@@ -36,17 +106,19 @@ ofTexture* FontPlayer::getTexture(){
 };
 
 void FontPlayer::play(){
-    this->playing = true;
     this->animationCurrPos = 0;
     this->lastUpdateTime = 0;
     this->currentLetter = 0;
     updateCurrentLineCount();
+    clearFbos();
+    this->playing = true;
 };
 void FontPlayer::stop(){
     this->playing = false;
     this->animationCurrPos = 0;
     this->lastUpdateTime = 0;
     this->currentLetter = 0;
+    clearFbos();
     updateCurrentLineCount();
 };
 void FontPlayer::update(){
@@ -71,18 +143,18 @@ void FontPlayer::update(){
     };
     switch(this->yAlign){
         case FontPlayer::Alignment::START:
-            y=-1*rect.y+this->margin; break;
+            y=-1*rect.y+this->marginY; break;
         case FontPlayer::Alignment::CENTER:
             y=(this->fbo.getHeight()-rect.height-rect.y)/2;break;
         case FontPlayer::Alignment::END:
-            y=this->fbo.getHeight()-rect.height-rect.y - this->margin;break;
+            y=this->fbo.getHeight()-rect.height-rect.y - this->marginY;break;
     }
     
     // move on with animation
     if(this->lastUpdateTime!=0){
         this->animationCurrPos += (callTime - this->lastUpdateTime);
         this->currentLetter =
-        ofClamp(this->animationCurrPos  * FontPlayer::LETTERS_PER_S * this->animationSpeed,0,wrappedText.length()-1);
+        ofClamp(this->animationCurrPos  * lettersPerSecond * this->animationSpeed,0,wrappedText.length()-1);
         updateCurrentLineCount();
     }
     
@@ -287,7 +359,12 @@ std::string FontPlayer::wrapText(){
     string tempString = "";
     vector <string> words = ofSplitString(text, " ");
     
-    float width = this->getWidth() - 2*margin;
+    float marginCorrection = margin;
+    if(this->xAlign == FontPlayer::Alignment::CENTER){
+        marginCorrection *= 2;
+    };
+    
+    float width = this->getWidth()*this->widthRatio - marginCorrection;
 
     
     for(int i=0; i<words.size(); i++) {
@@ -313,10 +390,12 @@ std::string FontPlayer::wrapText(){
         typeWrapped += wrd;
     }
     
-    if(this->font.stringHeight(typeWrapped) >= this->getHeight() && this->fontSize >= 8){
-        return this->setFontSize((int) this->fontSize*0.8);
+    if(autoResize){
+        if(this->font.stringHeight(typeWrapped) >= this->getHeight()*this->heightRatio && this->fontSize >= 8){
+                    return this->setFontSize((int) this->fontSize*0.8);
+        }
     }
-        
+
         return typeWrapped;
     
 }

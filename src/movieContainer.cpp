@@ -101,7 +101,7 @@ void  MovieContainer::setSpeed(float speed){
 };
 void  MovieContainer::setVolume(float volume){
     if(contentType==MovieType::hap){
-        return hapMovie->setVolume(1.0);
+        return hapMovie->setVolume(volume);
     }
 }; // 0..1
 

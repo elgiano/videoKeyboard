@@ -31,16 +31,26 @@ public:
     };
     
     Alignment xAlign = Alignment::START;
-    Alignment yAlign = Alignment::CENTER;
+    Alignment yAlign = Alignment::START;
+    
+    float lettersPerSecond = LETTERS_PER_S;
     
     AnimationType animationType = AnimationType::WORDFADE;
     
     ofColor color;
     
-    float margin = 120;
+    float margin = 550;
+    float marginY = 250;
+
+    float widthRatio=0.9;
+    float heightRatio=0.33;
     
     bool load(std::string text);
     bool load(std::string text,int size);
+    
+    std::string parseText(std::string text);
+    
+    bool autoResize = false;
 
     
     std::string setFontSize(int size);
@@ -72,7 +82,7 @@ private:
     std::string wrappedText;
     std::string currentLineText;
     
-    int fontSize=120;
+    int fontSize=24;
     
     bool reverse = false;
     float animationSpeed = 1.0f;
@@ -96,6 +106,8 @@ private:
 
     void updateCurrentLineCount();
     std::string wrapText();
+    
+    void clearFbos();
     
 };
 
