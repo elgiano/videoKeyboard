@@ -7,6 +7,9 @@
 
 #include "fontPlayer.hpp"
 
+
+// LOADING
+
 bool FontPlayer::load(std::string text,int size){
     
     if(!this->fbo.isAllocated()){
@@ -16,7 +19,9 @@ bool FontPlayer::load(std::string text,int size){
     }
     
     this->text = text;
+    this->parseTargetWords();
     this->setFontSize(size);
+    
 
     return true;
 };
@@ -25,14 +30,6 @@ bool FontPlayer::load(std::string text){
     this->load(this->parseText(text),fontSize);
 };
 
-void FontPlayer::clearFbos(){
-    this->maskFbo.begin();
-    ofClear(255,255,255,0);
-    this->maskFbo.end();
-    this->fbo.begin();
-    ofClear(255,255,255,0);
-    this->fbo.end();
-}
 
 std::string FontPlayer::parseText(std::string text){
     vector <string> lines = ofSplitString(text,"\n");
@@ -93,34 +90,59 @@ std::string FontPlayer::parseText(std::string text){
     
 };
 
+void FontPlayer::parseTargetWords(){
+    
+    // split text by spaces and newlines
+    /*std::vector<std::string> parsedLines;
+    lines = ofSplitString(text,"\n");
+    int wordCount = 0;
+    targetWords.clear();
+
+    for(auto &line: lines){
+        vector<string> lineWords = ofSplitString(line, " ");
+        for(auto &lineWord: lineWords){
+            // find target words, remove the marker
+            if(lineWord.front() == '$'){
+                targetWords.push_back(wordCount);
+                lineWord.erase(0,1);
+            }
+            wordCount++;
+        }
+        // rebuild parsed line
+        parsedLines.push_back(ofJoinString(lineWords," "));
+    };
+    
+    // rebuild the text without markers
+    text = ofJoinString(parsedLines, "\n");*/
+    
+    targetWords.clear();
+    words = getWords(text);
+    for(int i =0;i<words.size();i++){
+        if(words[i].front() == '$'){
+            targetWords.push_back(i);
+        }
+    }
+    for(auto &wordI: targetWords){
+        size_t start_pos = text.find(words[wordI]);
+        std::string to = words[wordI];
+        to.erase(0,1);
+        if(start_pos == std::string::npos) continue;
+        text.replace(start_pos, words[wordI].length(), to);
+    }
+
+}
+
 std::string FontPlayer::setFontSize(int size){
     this->font.load("../SourceSerifPro-Regular.ttf",size);
     fontSize = size;
     return this->wrappedText = this->wrapText();
+    
 
 }
 
-ofTexture* FontPlayer::getTexture(){
-    fbo.getTexture().setAlphaMask(maskFbo.getTexture());
-    return &fbo.getTexture();
-};
+// ANIMATION
 
-void FontPlayer::play(){
-    this->animationCurrPos = 0;
-    this->lastUpdateTime = 0;
-    this->currentLetter = 0;
-    updateCurrentLineCount();
-    clearFbos();
-    this->playing = true;
-};
-void FontPlayer::stop(){
-    this->playing = false;
-    this->animationCurrPos = 0;
-    this->lastUpdateTime = 0;
-    this->currentLetter = 0;
-    clearFbos();
-    updateCurrentLineCount();
-};
+
 void FontPlayer::update(){
     
     float callTime = ofGetElapsedTimef();
@@ -165,6 +187,8 @@ void FontPlayer::update(){
     switch(animationType){
         case AnimationType::SLIDE:  this->slideAnimation(x,y);break;
         case AnimationType::WORDFADE:    this->wordFadeAnimation(x,y);break;
+        case AnimationType::TARGETWORD:    this->targetWordAnimation(x,y);break;
+
     }
     this->maskFbo.end();
     
@@ -183,7 +207,7 @@ void FontPlayer::update(){
 };
 
 void FontPlayer::slideAnimation(int x,int y){
-    
+    ofEnableAlphaBlending();
     // Work line by line
     this->showCompletedLines(x,y);
     ofRectangle newLineBox = this->showCompletedLettersInCurrentLine(x,y);
@@ -197,7 +221,8 @@ void FontPlayer::slideAnimation(int x,int y){
     float extendedHeight = this->font.stringHeight(currentLineText);
     int fadeWidth = floor((extendedWidth-newLineBox.width)*(this->currentLetter-floor(this->currentLetter)));
     for(int i=0;i<fadeWidth;i++){
-        ofSetColor(color,255-(ofClamp((((float)i/fadeWidth)-0.5)*2,0,1))*255);
+        ofSetColor(color,255-((float)i/fadeWidth*255));
+        ofFill();
         ofDrawRectangle(newLineBox.getRight()+i, newLineBox.getBottom() - extendedHeight, 1, extendedHeight);
     }
 }
@@ -236,10 +261,11 @@ void FontPlayer::wordFadeAnimation(int x,int y){
     
     // calc current word's progress
     float wordProgress = ofClamp((linePos-completedWordsLength) / (currentWord.length()-1),0,1);
-    wordProgress = 3*pow(wordProgress,2) - (2*pow(wordProgress,3));
+    //wordProgress = 3*pow(wordProgress,2) - (2*pow(wordProgress,3));
     
     // fade in current word's block
     ofSetColor(color,255*wordProgress);
+    ofFill();
     //ofDrawRectangle(currentLineBox.getLeft()+completedWidth, currentLineBox.y, this->font.stringWidth(" "+currentWord), currentLineBox.height);
     ofDrawRectangle(currentLineBox.getLeft()+completedWidth, currentLineBox.getBottom()-lineHeight, this->font.stringWidth(" "+currentWord), lineHeight);
     
@@ -271,7 +297,7 @@ void FontPlayer::wordFadeAnimationReverse(int x,int y){
     if(reverse){
         completedWidth = this->font.stringWidth(currentLineText.substr(currentLineText.length()-completedWordsLength,completedWordsLength));
     }{
-        this->font.stringWidth(currentLineText.substr(0,completedWordsLength));
+        completedWidth = this->font.stringWidth(currentLineText.substr(0,completedWordsLength));
     };
     float lineHeight = this->font.stringHeight(currentLineText);
     
@@ -298,6 +324,38 @@ void FontPlayer::wordFadeAnimationReverse(int x,int y){
     
     
 }
+
+void FontPlayer::targetWordAnimation(int x, int y){
+    
+    ofEnableAlphaBlending();
+    float turningPoint = 15.0f/lettersPerSecond;
+    float delay = turningPoint;
+    float endPoint = 4*turningPoint;
+    // FIRST FADE IN TARGET WORDS
+    
+    float progress=1.0;
+    if(animationCurrPos <= turningPoint){
+        progress = (animationCurrPos)/(turningPoint);
+        //progress = (2*pow(progress,3)-3*pow(progress,2));
+        std::cout << 255*progress << std::endl;
+    };
+    for(auto &wordIndex: targetWords){
+        ofRectangle rect =  getWordBoundingBox(wordIndex,x,y);
+        ofSetColor(color,progress*255);
+        ofFill();
+        ofDrawRectangle(rect.x, rect.y, rect.width, rect.height);
+    }
+    if(animationCurrPos > turningPoint+delay){
+        // THEN FADE IN THE REST
+        float progress = (animationCurrPos - (turningPoint+delay))/(endPoint-(turningPoint+delay));
+        ofSetColor(color,progress*255);
+        ofRectangle rect = this->font.getStringBoundingBox(wrappedText,x, y);
+        ofDrawRectangle(rect.x, rect.y, rect.width, rect.height);
+    }
+}
+
+
+// UTILS
 
 ofRectangle FontPlayer::showCompletedLines(int x,int y){
     
@@ -336,7 +394,6 @@ ofRectangle FontPlayer::showCompletedLettersInCurrentLine(int x,int y){
 }
 
 void FontPlayer::updateCurrentLineCount(){
-    vector <string> lines = ofSplitString(wrappedText,"\n");
     if(reverse) std::reverse(lines.begin(),lines.end());
     completedLineChars = 0;
     currentLine = 0;
@@ -352,12 +409,70 @@ void FontPlayer::updateCurrentLineCount(){
     
 }
 
+ofRectangle FontPlayer::getWordBoundingBox(int wordIndex, int x, int y){
+
+    int lineIndex = 0;
+    int charIndex = 0;
+    int wordI = 0;
+    int wordInLineIndex = 0;
+    while(wordI<wordIndex && lineIndex < lines.size()){
+        std::string line =lines[lineIndex];
+        std::vector<std::string> lineWords = ofSplitString(lines[lineIndex], " ",true);
+        if(wordI+lineWords.size()>=wordIndex){
+            wordInLineIndex = wordIndex-wordI; // num of preceding words
+            wordI += wordInLineIndex;
+            wordInLineIndex = std::accumulate(lineWords.begin(),lineWords.begin()+wordInLineIndex,0,[](int a, std::string b) {
+                return std::move(a) + b.length()+1;
+            }); // num of precedingChars
+            break;
+        }
+        wordI += lineWords.size();
+        charIndex += lines[lineIndex].size()+1;
+        lineIndex++;
+    }
+    
+    charIndex += wordInLineIndex;
+    
+    this->currentLetter = charIndex;
+    updateCurrentLineCount();
+    std::string currentPartInLine = currentLineText.substr(0,charIndex-completedLineChars);
+    // draw completed words
+    float completedWidth = this->font.stringWidth(currentLineText.substr(0,charIndex-completedLineChars));
+    float lineHeight = this->font.stringHeight(currentLineText);
+    
+    ofSetColor(color,255);
+    ofRectangle currentLineBox  = getTextBoxToCurrentLine(x, y, currentLineText.length());
+    
+
+    return ofRectangle(currentLineBox.getLeft()+completedWidth, currentLineBox.getBottom()-lineHeight, this->font.stringWidth(" "+words[wordIndex])+2, lineHeight);
+    
+}
+
+std::vector<std::string> FontPlayer::getWords(std::string text){
+    std::vector<std::string> splitWords;
+    std::string line;
+    std::string word;
+    std::istringstream textInput;
+    textInput.str(text);
+    while(std::getline(textInput,line,'\n')){
+        std::istringstream lineInput;
+        lineInput.str(line);
+        while(std::getline(lineInput,word,' ')){
+            splitWords.push_back(word);
+        }
+    }
+    
+    return splitWords;
+}
+
 
 std::string FontPlayer::wrapText(){
 
     string typeWrapped = "";
     string tempString = "";
-    vector <string> words = ofSplitString(text, " ");
+    words = ofSplitString(text, " ");
+    
+    
     
     float marginCorrection = margin;
     if(this->xAlign == FontPlayer::Alignment::CENTER){
@@ -395,10 +510,51 @@ std::string FontPlayer::wrapText(){
                     return this->setFontSize((int) this->fontSize*0.8);
         }
     }
+    
+    lines = ofSplitString(typeWrapped,"\n");
+    words = this->getWords(text);
+    
+    for(auto &wordIndex: targetWords){
+        std::string word = words[wordIndex];
+        std::cout << word << std::endl;
+    }
 
-        return typeWrapped;
+    return typeWrapped;
     
 }
+
+void FontPlayer::clearFbos(){
+    this->maskFbo.begin();
+    ofClear(255,255,255,0);
+    this->maskFbo.end();
+    this->fbo.begin();
+    ofClear(255,255,255,0);
+    this->fbo.end();
+}
+
+// OTHER
+
+ofTexture* FontPlayer::getTexture(){
+    fbo.getTexture().setAlphaMask(maskFbo.getTexture());
+    return &fbo.getTexture();
+};
+
+void FontPlayer::play(){
+    this->animationCurrPos = 0;
+    this->lastUpdateTime = 0;
+    this->currentLetter = 0;
+    updateCurrentLineCount();
+    clearFbos();
+    this->playing = true;
+};
+void FontPlayer::stop(){
+    this->playing = false;
+    this->animationCurrPos = 0;
+    this->lastUpdateTime = 0;
+    this->currentLetter = 0;
+    clearFbos();
+    updateCurrentLineCount();
+};
 
 void FontPlayer::nextFrame(){};
 

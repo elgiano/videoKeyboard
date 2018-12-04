@@ -27,7 +27,8 @@ public:
     
     enum AnimationType{
         SLIDE,
-        WORDFADE
+        WORDFADE,
+        TARGETWORD
     };
     
     Alignment xAlign = Alignment::START;
@@ -35,7 +36,7 @@ public:
     
     float lettersPerSecond = LETTERS_PER_S;
     
-    AnimationType animationType = AnimationType::WORDFADE;
+    AnimationType animationType = AnimationType::SLIDE;
     
     ofColor color;
     
@@ -45,15 +46,15 @@ public:
     float widthRatio=0.9;
     float heightRatio=0.33;
     
-    bool load(std::string text);
-    bool load(std::string text,int size);
-    
-    std::string parseText(std::string text);
-    
     bool autoResize = false;
 
     
+    bool load(std::string text);
+    bool load(std::string text,int size);
     std::string setFontSize(int size);
+    
+    std::vector<int> targetWords;
+
     
     ofTexture *getTexture();
     
@@ -81,6 +82,9 @@ private:
     std::string text;
     std::string wrappedText;
     std::string currentLineText;
+    vector <string> words;
+    vector <string> lines;
+
     
     int fontSize=24;
     
@@ -98,14 +102,22 @@ private:
     void slideAnimation(int x,int y);
     void wordFadeAnimation(int x,int y);
     void wordFadeAnimationReverse(int x,int y);
+    void targetWordAnimation(int x,int y);
+
 
     ofRectangle showCompletedLines(int x,int y);
     ofRectangle showCompletedLettersInCurrentLine(int x,int y);
     ofRectangle getTextBoxToCurrentLine(int x,int y, int additionalChars);
     ofRectangle getTextBoxToCurrentLine(int x,int y, int additionalChars,string txt);
+    ofRectangle getWordBoundingBox(int wordIndex,int x, int y);
+
 
     void updateCurrentLineCount();
     std::string wrapText();
+    std::string parseText(std::string text);
+    void parseTargetWords();
+
+    std::vector<std::string> getWords(std::string text);
     
     void clearFbos();
     
