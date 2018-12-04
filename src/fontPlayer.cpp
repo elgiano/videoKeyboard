@@ -15,14 +15,14 @@ bool FontPlayer::load(std::string text,int size){
         clearFbos();
     }
     
-    this->text = text;
+    this->text = this->parseText(text);
     this->setFontSize(size);
 
     return true;
 };
 
 bool FontPlayer::load(std::string text){
-    this->load(this->parseText(text),fontSize);
+    this->load(text,fontSize);
 };
 
 void FontPlayer::clearFbos(){
@@ -47,19 +47,19 @@ std::string FontPlayer::parseText(std::string text){
                 switch(i){
                     case 0:
                         if(value<0){
-                            this->margin =-value;
+                            this->margin =-value*getWidth();
                             this->xAlign = FontPlayer::Alignment::END;
                         }else{
-                            this->margin =value;
+                            this->margin =value*getWidth();
                             this->xAlign = FontPlayer::Alignment::START;
                         };
                         break;
                     case 1:
                         if(value<0){
-                            this->marginY =-value;
+                            this->marginY =-value*getHeight();
                             this->yAlign = FontPlayer::Alignment::END;
                         }else{
-                            this->marginY =value;
+                            this->marginY =value*getHeight();
                             this->yAlign = FontPlayer::Alignment::START;
                         };
                         break;
@@ -94,7 +94,7 @@ std::string FontPlayer::parseText(std::string text){
 };
 
 std::string FontPlayer::setFontSize(int size){
-    this->font.load("../SourceSerifPro-Regular.ttf",size);
+    this->font.load("../NotoSans-SemiCondensed.ttf",size);
     fontSize = size;
     return this->wrappedText = this->wrapText();
 

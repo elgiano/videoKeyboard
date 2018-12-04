@@ -30,8 +30,8 @@ public:
         WORDFADE
     };
     
-    Alignment xAlign = Alignment::START;
-    Alignment yAlign = Alignment::START;
+    Alignment xAlign = Alignment::CENTER;
+    Alignment yAlign = Alignment::CENTER;
     
     float lettersPerSecond = LETTERS_PER_S;
     
@@ -39,18 +39,18 @@ public:
     
     ofColor color;
     
-    float margin = 550;
-    float marginY = 250;
+    float margin = 120;
+    float marginY = 120;
 
-    float widthRatio=0.9;
-    float heightRatio=0.33;
+    float widthRatio=1.0;
+    float heightRatio=1.0;
     
     bool load(std::string text);
     bool load(std::string text,int size);
     
     std::string parseText(std::string text);
     
-    bool autoResize = false;
+    bool autoResize = true;
 
     
     std::string setFontSize(int size);
@@ -82,7 +82,7 @@ private:
     std::string wrappedText;
     std::string currentLineText;
     
-    int fontSize=24;
+    int fontSize=20;//24;
     
     bool reverse = false;
     float animationSpeed = 1.0f;
