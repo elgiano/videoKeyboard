@@ -36,7 +36,7 @@ public:
 
     float lettersPerSecond = LETTERS_PER_S;
 
-    AnimationType animationType = AnimationType::SLIDE;
+    AnimationType animationType = AnimationType::WORDFADE;
 
     ofColor color;
 

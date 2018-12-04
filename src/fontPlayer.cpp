@@ -18,7 +18,8 @@ bool FontPlayer::load(std::string text,int size){
         clearFbos();
     }
 
-    this->text = this->parseText(text);
+    this->text = parseText(text);
+    this->parseTargetWords();
     this->setFontSize(size);
 
 
@@ -66,6 +67,9 @@ std::string FontPlayer::parseText(std::string text){
                         this->heightRatio = value;
                         break;
                     case 4:
+                        this->animationType = static_cast<FontPlayer::AnimationType>(floor(ofClamp(value,0,2)));
+                        break;
+                    case 5:
                         if(value<0){
                             this->marginY =-value;
                             this->reverse = true;
@@ -74,6 +78,7 @@ std::string FontPlayer::parseText(std::string text){
                             this->reverse = false;
                         };
                         break;
+                    
 
                 };
 
