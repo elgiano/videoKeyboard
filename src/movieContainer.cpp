@@ -20,6 +20,11 @@ bool MovieContainer::load(std::string name){
         fontPlayer = new FontPlayer();
         ofBuffer buffer = ofBufferFromFile(name); // reading into the buffer
         return fontPlayer->load(buffer.getText());
+    }else{
+        imagePlayer = new ImagePlayer();
+        bool success = imagePlayer->load(name);
+        if(success) contentType = MovieType::image;
+        return success;
     }
     
 };
@@ -29,6 +34,8 @@ ofTexture * MovieContainer::getTexture(){
         return hapMovie->getTexture();
     }else if(contentType==MovieType::txt){
         return fontPlayer->getTexture();
+    }else if(contentType==MovieType::image){
+        return imagePlayer->getTexture();
     }
     
 }
@@ -37,6 +44,8 @@ float  MovieContainer::getWidth() const{
         return hapMovie->getWidth();
     }else if(contentType==MovieType::txt){
         return fontPlayer->getWidth();
+    }else if(contentType==MovieType::image){
+        return imagePlayer->getWidth();
     }
 }
 float MovieContainer::getHeight() const{
@@ -44,6 +53,8 @@ float MovieContainer::getHeight() const{
         return hapMovie->getHeight();
     }else if(contentType==MovieType::txt){
         return fontPlayer->getHeight();
+    }else if(contentType==MovieType::image){
+        return imagePlayer->getHeight();
     }
 };
 
@@ -52,6 +63,8 @@ float MovieContainer::getPosition() const{
         return hapMovie->getPosition();
     }else if(contentType==MovieType::txt){
         return fontPlayer->getPosition();
+    }else if(contentType==MovieType::image){
+        return 0;
     }
 };
 void  MovieContainer::setPosition(float pct){
@@ -66,6 +79,8 @@ float MovieContainer::getDuration() const{
         return hapMovie->getDuration();
     }else if(contentType==MovieType::txt){
         return fontPlayer->getDuration();
+    }else if(contentType==MovieType::image){
+        return 1;
     }
 };
 
@@ -90,6 +105,8 @@ bool  MovieContainer::isPlaying() const{
         return hapMovie->isPlaying();
     }else if(contentType==MovieType::txt){
         return fontPlayer->isPlaying();
+    }else if(contentType==MovieType::image){
+        return imagePlayer->isPlaying();
     }
 };
 void  MovieContainer::setSpeed(float speed){
@@ -110,6 +127,8 @@ void  MovieContainer::play(){
         return hapMovie->play();
     }else if(contentType==MovieType::txt){
         return fontPlayer->play();
+    }else if(contentType==MovieType::image){
+        return imagePlayer->play();
     }
 };
 
@@ -118,6 +137,8 @@ void  MovieContainer::stop(){
         return hapMovie->stop();
     }else if(contentType==MovieType::txt){
         return fontPlayer->stop();
+    }else if(contentType==MovieType::image){
+        return imagePlayer->stop();
     }
 };
 

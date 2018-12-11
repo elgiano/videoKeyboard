@@ -11,19 +11,24 @@
 #include <stdio.h>
 #include "ofxHapPlayer.h"
 #include "fontPlayer.hpp"
+#include "imagePlayer.hpp"
+
 
 
 
 enum class MovieType {
     not_loaded,
     hap,
-    txt
+    txt,
+    image
 };
 
 class MovieContainer {
     
     ofxHapPlayer *hapMovie;
     FontPlayer *fontPlayer;
+    ImagePlayer *imagePlayer;
+
     
     public:
     

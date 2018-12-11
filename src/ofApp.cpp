@@ -187,6 +187,9 @@ void ofApp::loadSourceGroup(string path,int layout){
     ofDirectory subdir(path);
     subdir.allowExt("mov");
     subdir.allowExt("txt");
+    subdir.allowExt("jpg");subdir.allowExt("png");subdir.allowExt("gif");
+
+
 
     subdir.listDir();
     subdir.sort();
@@ -564,7 +567,7 @@ void ofApp::draw(){
       if(active_videos[i] or sostenuto_videos[i] or sostenutoFreeze_videos[i]){
       /*movie[i].setLoopState(loopState);
       cout << movie[i].getLoopState() << endl;*/
-      if( movie[i].contentType == MovieType::hap) drawVideoInLayout(i);
+      if( movie[i].contentType != MovieType::txt) drawVideoInLayout(i);
 
     }
       
