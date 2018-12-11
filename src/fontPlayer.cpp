@@ -7,6 +7,24 @@
 
 #include "fontPlayer.hpp"
 
+bool isPrime(long int n)
+{
+    if (n == 1)
+    {
+        return false;
+    }
+    int i = 2;
+    while (i*i <= n)
+    {
+        if (n % i == 0)
+        {
+            return false;
+        }
+        i += 1;
+    }
+    return true;
+}
+
 
 // LOADING
 
@@ -21,6 +39,9 @@ bool FontPlayer::load(std::string text,int size){
     this->text = parseText(text);
     this->parseTargetWords();
     this->setFontSize(size);
+    
+    makeConstellation();
+
 
 
     return true;
@@ -96,29 +117,6 @@ std::string FontPlayer::parseText(std::string text){
 
 void FontPlayer::parseTargetWords(){
 
-    // split text by spaces and newlines
-    /*std::vector<std::string> parsedLines;
-    lines = ofSplitString(text,"\n");
-    int wordCount = 0;
-    targetWords.clear();
-
-    for(auto &line: lines){
-        vector<string> lineWords = ofSplitString(line, " ");
-        for(auto &lineWord: lineWords){
-            // find target words, remove the marker
-            if(lineWord.front() == '$'){
-                targetWords.push_back(wordCount);
-                lineWord.erase(0,1);
-            }
-            wordCount++;
-        }
-        // rebuild parsed line
-        parsedLines.push_back(ofJoinString(lineWords," "));
-    };
-
-    // rebuild the text without markers
-    text = ofJoinString(parsedLines, "\n");*/
-
     targetWords.clear();
     words = getWords(text);
     for(int i =0;i<words.size();i++){
@@ -140,9 +138,14 @@ std::string FontPlayer::setFontSize(int size){
     this->font.load("../NotoSans-SemiCondensed.ttf",size);
     fontSize = size;
     return this->wrappedText = this->wrapText();
-
-
 }
+
+std::string FontPlayer::setFontScale(float scale){
+    this->font.load("../NotoSans-SemiCondensed.ttf",fontSize*scale);
+    fontScale = scale;
+    return this->wrappedText = this->wrapText();
+}
+
 
 // ANIMATION
 
@@ -188,11 +191,19 @@ void FontPlayer::update(){
 
     this->maskFbo.begin();
     ofClear(255,255,255,0);
-    switch(animationType){
-        case AnimationType::SLIDE:  this->slideAnimation(x,y);break;
-        case AnimationType::WORDFADE:    this->wordFadeAnimation(x,y);break;
-        case AnimationType::TARGETWORD:    this->targetWordAnimation(x,y);break;
-
+    if(spreadMode==SpreadMode::TOGETHER){
+        switch(animationType){
+            case AnimationType::SLIDE:  this->slideAnimation(x,y);break;
+            case AnimationType::WORDFADE:    this->wordFadeAnimation(x,y);break;
+            case AnimationType::TARGETWORD:    this->targetWordAnimation(x,y);break;
+        }
+    }else{
+        switch(animationType){
+            case AnimationType::SLIDE:  this->drawConstellationMask();break;
+            case AnimationType::WORDFADE:    this->wordFadeAnimationConstellation();break;
+            case AnimationType::TARGETWORD:    this->targetWordAnimation(x,y);break;
+        }
+        //ofDrawRectangle(0, 0, getWidth(), getHeight());
     }
     this->maskFbo.end();
 
@@ -203,7 +214,12 @@ void FontPlayer::update(){
     ofClear(255,255,255,0);
     /*rect = this->font.getStringBoundingBox(wrappedText,x, y);
     ofSetColor(255,0,0); ofDrawRectangle(rect.x, rect.y, rect.width, rect.height);ofSetColor(color);*/
-    this->font.drawString(wrappedText,x,y);
+    if(spreadMode==SpreadMode::TOGETHER){
+        this->font.drawString(wrappedText,x,y);
+    }else if(spreadMode==SpreadMode::SPREAD){
+        this->drawConstellation();
+        //this->drawConstellationMask();
+    }
     this->fbo.end();
 
     this->lastUpdateTime = callTime;
@@ -212,6 +228,8 @@ void FontPlayer::update(){
 
 void FontPlayer::slideAnimation(int x,int y){
     ofEnableAlphaBlending();
+    
+    
     // Work line by line
     this->showCompletedLines(x,y);
     ofRectangle newLineBox = this->showCompletedLettersInCurrentLine(x,y);
@@ -235,7 +253,7 @@ void FontPlayer::wordFadeAnimation(int x,int y){
 
     if(reverse) return wordFadeAnimationReverse(x, y);
 
-    ofRectangle completedLinesBox = this->showCompletedLines(x,y);
+    this->showCompletedLines(x,y);
 
     // get current word
     vector <string> words = ofSplitString(currentLineText," ");
@@ -277,7 +295,7 @@ void FontPlayer::wordFadeAnimation(int x,int y){
 
 void FontPlayer::wordFadeAnimationReverse(int x,int y){
 
-    ofRectangle completedLinesBox = this->showCompletedLines(x,y);
+    this->showCompletedLines(x,y);
 
     // get current word
     vector <string> words = ofSplitString(currentLineText," ");
@@ -329,6 +347,26 @@ void FontPlayer::wordFadeAnimationReverse(int x,int y){
 
 }
 
+void FontPlayer::wordFadeAnimationConstellation(){
+    
+    int currentWordI = this->showCompletedWords();
+    
+    // calc current word's progress
+    int completedWordsLength = 0;
+    if(currentWordI>0) completedWordsLength = std::accumulate(words.begin(), words.begin()+currentWordI-1, 0,[](int a, std::string b) {
+        return std::move(a) + b.length()+1;
+    });
+    float wordProgress = ofClamp((currentLetter-completedWordsLength) / (words[currentWordI].length()-1),0,1);
+    //wordProgress = 3*pow(wordProgress,2) - (2*pow(wordProgress,3));
+    
+    // fade in current word's block
+    ofSetColor(color,255*wordProgress);
+    ofFill();
+    drawConstellationWord(currentWordI);
+
+    
+}
+
 void FontPlayer::targetWordAnimation(int x, int y){
 
     ofEnableAlphaBlending();
@@ -341,10 +379,13 @@ void FontPlayer::targetWordAnimation(int x, int y){
     if(animationCurrPos <= turningPoint){
         progress = (animationCurrPos)/(turningPoint);
         //progress = (2*pow(progress,3)-3*pow(progress,2));
-        std::cout << 255*progress << std::endl;
+        //std::cout << 255*progress << std::endl;
     };
     for(auto &wordIndex: targetWords){
         ofRectangle rect =  getWordBoundingBox(wordIndex,x,y);
+        if(spreadMode == SpreadMode::SPREAD){
+            rect = constellation[wordIndex];
+        }
         ofSetColor(color,progress*255);
         ofFill();
         ofDrawRectangle(rect.x, rect.y, rect.width, rect.height);
@@ -361,14 +402,23 @@ void FontPlayer::targetWordAnimation(int x, int y){
 
 // UTILS
 
-ofRectangle FontPlayer::showCompletedLines(int x,int y){
+void FontPlayer::showCompletedLines(int x,int y){
 
     // draw completed lines
     ofSetColor(color,255);
     ofRectangle completedLinesBox = getTextBoxToCurrentLine(x, y, 0);
     ofDrawRectangle(completedLinesBox.x, completedLinesBox.y, completedLinesBox.width, completedLinesBox.height);
+}
 
-    return completedLinesBox;
+int FontPlayer::showCompletedWords(){
+    int i = 0;
+    int l = 0;
+    while(l<currentLetter && i<words.size()){
+        drawConstellationWord(i++);
+        l+=words[i].length();
+    }
+    return ofClamp(i,0,words.size()-1);
+    
 }
 
 ofRectangle FontPlayer::getTextBoxToCurrentLine(int x, int y, int additionalChars){
@@ -413,6 +463,7 @@ void FontPlayer::updateCurrentLineCount(){
 
 }
 
+
 ofRectangle FontPlayer::getWordBoundingBox(int wordIndex, int x, int y){
 
     int lineIndex = 0;
@@ -450,6 +501,69 @@ ofRectangle FontPlayer::getWordBoundingBox(int wordIndex, int x, int y){
 
     return ofRectangle(currentLineBox.getLeft()+completedWidth, currentLineBox.getBottom()-lineHeight, this->font.stringWidth(" "+words[wordIndex])+2, lineHeight);
 
+}
+
+// MARK: constellation
+
+void FontPlayer::makeConstellation(){
+    constellation.clear();
+    
+    int n = words.size();
+    if(isPrime(n)) n++;
+    int columns;
+    for (columns = (int)ceil(sqrt(n)); columns > 1; --columns) {
+        if (n % columns == 0) break;
+    }
+    int rows = n / columns;
+    
+    int i = 0,j=0;
+    int cellW = getWidth()/columns;
+    int cellH = getHeight()/rows;
+    for(auto &word: words){
+        int h = font.stringHeight(word);
+        int w = font.stringWidth(word);
+        int x = cellW*i + (rand()%abs(cellW-w));
+        int y = cellH*j + (rand()%abs(cellH-h));
+        constellation.push_back(font.getStringBoundingBox(word+" ", x,y));
+        if(++i>=columns){i=0;j++;}
+    }
+}
+
+void FontPlayer::drawConstellation(){
+    for(int i=0;i<words.size();i++){
+        font.drawString(words[i],constellation[i].x,constellation[i].y);
+    }
+}
+void FontPlayer::drawConstellationMask(){
+    
+    /*int n = words.size();
+    if(isPrime(n)) n++;
+    int columns;
+    for (columns = (int)ceil(sqrt(n)); columns > 1; --columns) {
+        if (n % columns == 0) break;
+    }
+    int rows = n / columns;
+    
+    int i = 0,j=0;
+    int cellW = getWidth()/columns;
+    int cellH = getHeight()/rows;
+    for(auto &word: words){
+        ofSetColor(rand()%255,rand()%255,rand()%255,200);
+        ofDrawRectangle(cellW*i, cellH*j, cellW, cellH);
+        if(++i>=columns){i=0;j++;}
+    }*/
+    
+    for(int i =0; i< constellation.size(); i++){
+            ofSetColor(color,255);
+            drawConstellationWord(i);
+    }
+    
+
+}
+
+void FontPlayer::drawConstellationWord(int i){
+    ofRectangle rect = constellation[i];
+    ofDrawRectangle(rect.x, rect.y-rect.height, rect.width, rect.height-font.getDescenderHeight());
 }
 
 std::vector<std::string> FontPlayer::getWords(std::string text){
@@ -517,11 +631,6 @@ std::string FontPlayer::wrapText(){
 
     lines = ofSplitString(typeWrapped,"\n");
     words = this->getWords(text);
-
-    for(auto &wordIndex: targetWords){
-        std::string word = words[wordIndex];
-        std::cout << word << std::endl;
-    }
 
     return typeWrapped;
 
