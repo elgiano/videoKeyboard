@@ -18,6 +18,8 @@ class FontPlayer{
 public:
 
     constexpr static const float LETTERS_PER_S = 16;
+    
+
 
     enum Alignment{
         START,
@@ -30,6 +32,11 @@ public:
         WORDFADE,
         TARGETWORD
     };
+    
+    enum SpreadMode{
+        TOGETHER,
+        SPREAD
+    };
 
     Alignment xAlign = Alignment::CENTER;
     Alignment yAlign = Alignment::CENTER;
@@ -37,6 +44,9 @@ public:
     float lettersPerSecond = LETTERS_PER_S;
 
     AnimationType animationType = AnimationType::WORDFADE;
+    SpreadMode spreadMode = SpreadMode::SPREAD;
+    
+    std::vector<ofRectangle> constellation;
 
     ofColor color;
 
@@ -45,6 +55,8 @@ public:
 
     float widthRatio=1.0;
     float heightRatio=1.0;
+    
+    float fontScale = 0.1;
 
     bool autoResize = false;
 
@@ -52,6 +64,7 @@ public:
     bool load(std::string text);
     bool load(std::string text,int size);
     std::string setFontSize(int size);
+    std::string setFontScale(float scale);
 
     std::vector<int> targetWords;
 
@@ -72,7 +85,7 @@ public:
 
     bool  isPlaying() const;
     void  setSpeed(float speed);
-
+    
 private:
     ofTrueTypeFont font;
     ofTexture texture;
@@ -102,14 +115,21 @@ private:
     void slideAnimation(int x,int y);
     void wordFadeAnimation(int x,int y);
     void wordFadeAnimationReverse(int x,int y);
+    void wordFadeAnimationConstellation();
     void targetWordAnimation(int x,int y);
+    
+    void drawConstellation();
+    void drawConstellationMask();
+    void drawConstellationWord(int i);
 
 
-    ofRectangle showCompletedLines(int x,int y);
+
+    void showCompletedLines(int x,int y);
     ofRectangle showCompletedLettersInCurrentLine(int x,int y);
     ofRectangle getTextBoxToCurrentLine(int x,int y, int additionalChars);
     ofRectangle getTextBoxToCurrentLine(int x,int y, int additionalChars,string txt);
     ofRectangle getWordBoundingBox(int wordIndex,int x, int y);
+    int showCompletedWords();
 
 
     void updateCurrentLineCount();
@@ -118,6 +138,8 @@ private:
     void parseTargetWords();
 
     std::vector<std::string> getWords(std::string text);
+    void makeConstellation();
+
 
     void clearFbos();
 
