@@ -336,8 +336,17 @@ s.waitForBoot{
 				"Couldn't find midi port #%\n".postf(port);
 			}
 		};
-		MIDIdef.noteOn(\vkNoteOn,{|...msg|vk.playSample(vk.midiNoteToVideoKey(msg[1]),msg[0]/127);});
-		MIDIdef.noteOff(\vkNoteOff,{|...msg|vk.stopSample(vk.midiNoteToVideoKey(msg[1]));});
+		MIDIdef.noteOn(\vkNoteOn,{|...msg|
+			{
+				vk.playSample(vk.midiNoteToVideoKey(msg[1]),msg[0]/127);
+			}.defer(0.1)
+		});
+		MIDIdef.noteOff(\vkNoteOff,{|...msg|
+			{
+				vk.stopSample(vk.midiNoteToVideoKey(msg[1]));
+			}.defer(0.1)
+
+		});
 		MIDIdef.cc(\vkNoteCC,{|...msg|if(vk.midiMappings[msg[1]]!=nil){vk.midiCommands[vk.midiMappings[msg[1]]].(msg[0]/127)};
 			//vk.midiMappings[msg[1]].postln;msg[1].postln
 		});
@@ -463,7 +472,7 @@ s.waitForBoot{
 	// control functions
 
 	~vk.setSustain = {|vk,val|
-		vk.sustain = val>0;
+		vk.sustain = val>0.5;
 		if(vk.sustain.not){vk.stopSustain();};
 	};
 	~vk.stopSustain = {|vk|
