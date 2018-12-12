@@ -163,3 +163,9 @@ void  MovieContainer::setColor(ofColor col){
         return fontPlayer->color = col;
     }
 };
+
+void  MovieContainer::setFontScale(float scale){
+    if(contentType==MovieType::txt){
+        return fontPlayer->setFontScale(scale);
+    }
+};

@@ -185,9 +185,11 @@ void ofApp::loadMultipleGroup(string path){
 void ofApp::loadSourceGroup(string path,int layout){
     cout << "loading source group " << path << endl;
     ofDirectory subdir(path);
+    subdir.allowExt("png");
+    subdir.allowExt("jpg");
+    subdir.allowExt("gif");
     subdir.allowExt("mov");
     subdir.allowExt("txt");
-    subdir.allowExt("jpg");subdir.allowExt("png");subdir.allowExt("gif");
 
 
 
@@ -771,6 +773,15 @@ int ofApp::setNumberFromKey(int key){
     return loadedSets>0?loadedSets-1:0;
 }
 // ### CONTROL ###
+
+void ofApp::setFontScale(float scale){
+    sustain=0 ;
+    for(int i=0;i<MAX_VIDEOS;i++){
+        if(movie[i].contentType == MovieType::txt){
+            movie[i].setFontScale(scale);
+        }
+    }
+}
 
 void ofApp::panic(){
     sustain=0 ;

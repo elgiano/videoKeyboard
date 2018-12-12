@@ -142,6 +142,8 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
         void startSostenutoFreeze();
         void stopSostenutoFreeze();
         void panic();
+    
+    void setFontScale(float scale);
 
     float harmonicLoopDur(int key);
 

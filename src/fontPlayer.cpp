@@ -143,10 +143,8 @@ std::string FontPlayer::setFontSize(int size){
     return this->wrappedText = this->wrapText();
 }
 
-std::string FontPlayer::setFontScale(float scale){
-    this->font.load("../NotoSans-SemiCondensed.ttf",fontSize*scale);
+void FontPlayer::setFontScale(float scale){
     fontScale = scale;
-    return this->wrappedText = this->wrapText();
 }
 
 
@@ -202,7 +200,7 @@ void FontPlayer::update(){
         }
     }else{
         switch(animationType){
-            case AnimationType::SLIDE:  this->drawConstellationMask();break;
+            case AnimationType::SLIDE:  /*this->drawConstellationMask()*/this->constellationTrembleAnimation();break;
             case AnimationType::WORDFADE:    this->wordFadeAnimationConstellation();break;
             case AnimationType::TARGETWORD:    this->targetWordAnimation(x,y);break;
         }
@@ -510,6 +508,7 @@ ofRectangle FontPlayer::getWordBoundingBox(int wordIndex, int x, int y){
 
 void FontPlayer::makeConstellation(){
     constellation.clear();
+    constellation = std::vector<ofRectangle>(words.size(),ofRectangle());
     
     int n = words.size();
     if(isPrime(n)) n++;
@@ -522,19 +521,29 @@ void FontPlayer::makeConstellation(){
     int i = 0,j=0;
     int cellW = getWidth()/columns;
     int cellH = getHeight()/rows;
-    for(auto &word: words){
+    
+    
+    std::vector<int> indices(words.size());
+    std::iota(indices.begin(), indices.end(), 0);
+    std::random_shuffle(indices.begin(), indices.end());
+    
+    for(int index: indices){
+        std::string word = words[index];
         int h = font.stringHeight(word);
         int w = font.stringWidth(word);
         int x = cellW*i + (rand()%abs(cellW-w));
-        int y = cellH*j + (rand()%abs(cellH-h));
-        constellation.push_back(font.getStringBoundingBox(word+" ", x,y));
+        int y = cellH*j + (rand()%abs(cellH-h))+h;
+        constellation[index] = font.getStringBoundingBox(word+" ", x,y);
         if(++i>=columns){i=0;j++;}
     }
 }
 
 void FontPlayer::drawConstellation(){
     for(int i=0;i<words.size();i++){
-        font.drawString(words[i],constellation[i].x,constellation[i].y);
+        ofPushMatrix();
+        ofScale(fontScale,fontScale,1);
+        font.drawString(words[i],constellation[i].x/fontScale,constellation[i].y/fontScale);
+        ofPopMatrix();
     }
 }
 void FontPlayer::drawConstellationMask(){
@@ -556,12 +565,33 @@ void FontPlayer::drawConstellationMask(){
         if(++i>=columns){i=0;j++;}
     }*/
     
+    float progress = (animationCurrPos)/(100.0f/lettersPerSecond/animationSpeed);
+    
     for(int i =0; i< constellation.size(); i++){
-            ofSetColor(color,255);
+            ofSetColor(color,progress*255);
             drawConstellationWord(i);
     }
     
 
+}
+
+void FontPlayer::constellationTrembleAnimation(){
+    
+    
+    for(int i =0; i< constellation.size(); i++){
+        int cycleDur = int((20+(i+1)*2)/animationSpeed*1000);
+        float progress = (int(animationCurrPos*1000) % cycleDur)/(float)cycleDur;
+        if(progress<=0.5){
+            progress = progress*2;
+        }else{
+            progress = (1-progress)*2;
+        }
+        progress = 3*pow(progress,2) - (2*pow(progress,3));
+        ofSetColor(color,progress*255);
+        drawConstellationWord(i);
+    }
+    
+    
 }
 
 void FontPlayer::drawConstellationWord(int i){

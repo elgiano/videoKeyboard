@@ -1,5 +1,5 @@
 #!/Library/Frameworks/Python.framework/Versions/3.6/bin/python3
-#/Users/gnlcelia/dev/videoKeyboard/bin/sets
+#/Applications/VideoKeyboard/videoKeyboardText/bin/sets
 
 from os import listdir, mkdir,rmdir, symlink, remove, rename, system, pardir
 from os.path import isdir, isfile, join, getsize, abspath, isabs,realpath, basename,splitext,exists
@@ -845,9 +845,9 @@ class MyWindow(Gtk.Window):
                     size = group["size"]
                 else:
                     if(isabs(group["src"])):
-                        size = len([f for f in listdir(group["src"]) if isfile(join(group["src"],f) and splitext(f)[1] == ".mov")])
+                        size = len([f for f in listdir(group["src"]) if isfile(join(group["src"],f) and splitext(f)[1] in [".mov",".txt",".jpg",".png"])])
                     else:
-                        size = len([f for f in listdir(join(path,group["src"])) if isfile(join(join(path,group["src"]),f)) and splitext(f)[1] == ".mov"])
+                        size = len([f for f in listdir(join(path,group["src"])) if isfile(join(join(path,group["src"]),f)) and splitext(f)[1] in [".mov",".txt",".jpg",".png"]])
 
             autoplay = False
             if "autoplay" in group:

@@ -56,7 +56,7 @@ public:
     float widthRatio=1.0;
     float heightRatio=1.0;
     
-    float fontScale = 0.1;
+    float fontScale = 1.0;
 
     bool autoResize = false;
 
@@ -64,7 +64,7 @@ public:
     bool load(std::string text);
     bool load(std::string text,int size);
     std::string setFontSize(int size);
-    std::string setFontScale(float scale);
+    void setFontScale(float scale);
 
     std::vector<int> targetWords;
 
@@ -117,6 +117,8 @@ private:
     void wordFadeAnimationReverse(int x,int y);
     void wordFadeAnimationConstellation();
     void targetWordAnimation(int x,int y);
+    void constellationTrembleAnimation();
+
     
     void drawConstellation();
     void drawConstellationMask();

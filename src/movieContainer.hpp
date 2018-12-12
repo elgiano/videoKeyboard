@@ -57,6 +57,8 @@ class MovieContainer {
         virtual void                update();
     
     virtual void                    setColor(ofColor col);
+    
+    void                        setFontScale(float scale);
 
     
         /*
