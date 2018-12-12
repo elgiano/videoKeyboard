@@ -44,7 +44,7 @@ public:
     float lettersPerSecond = LETTERS_PER_S;
 
     AnimationType animationType = AnimationType::WORDFADE;
-    SpreadMode spreadMode = SpreadMode::SPREAD;
+    SpreadMode spreadMode = SpreadMode::TOGETHER;
     
     std::vector<ofRectangle> constellation;
 

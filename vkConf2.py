@@ -1,5 +1,5 @@
 #!/Library/Frameworks/Python.framework/Versions/3.6/bin/python3
-#/Applications/VideoKeyboard/videoKeyboardText/bin/sets
+#/Users/gnlcelia/dev/videoKeyboard/bin/sets
 
 from os import listdir, mkdir,rmdir, symlink, remove, rename, system, pardir
 from os.path import isdir, isfile, join, getsize, abspath, isabs,realpath, basename,splitext,exists
@@ -21,7 +21,7 @@ import subprocess
 
 def extractAudioGroup(path):
 
-    allowExt = [".mov",".txt"]
+    allowExt = [".mov",".txt",".gif",".png",".jpg"]
 
     dirs = listdir( path )
     dirs = [join(path,f) for f in dirs if splitext(f)[1] in allowExt]

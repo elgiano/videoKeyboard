@@ -91,8 +91,11 @@ std::string FontPlayer::parseText(std::string text){
                         this->animationType = static_cast<FontPlayer::AnimationType>(floor(ofClamp(value,0,2)));
                         break;
                     case 5:
+                        this->spreadMode = static_cast<FontPlayer::SpreadMode>(floor(ofClamp(value,0,1)));
+                        break;
+                    case 6:
                         if(value<0){
-                            this->marginY =-value;
+                            this->lettersPerSecond =-value;
                             this->reverse = true;
                         }else{
                             this->lettersPerSecond = value;
