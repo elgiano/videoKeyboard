@@ -201,6 +201,9 @@ void ofApp::newMidiMessage(ofxMidiMessage& msg) {
                   setFontScale(ofMap((float)msg.value/midiMaxVal,0,1,0.01,1));
                   cout << "fontSize " << ofMap((float)msg.value/midiMaxVal,0,1,0.01,1) << endl;
                   break;
+              case MidiCommand::imgNegative:
+                  setImgNegative(msg.value!=0);
+                  break;
               case MidiCommand::speed_dynamics:
                       dynIsSpeed = msg.value!=0;
                       cout << "dynIsSpeed " << dynIsSpeed << endl;

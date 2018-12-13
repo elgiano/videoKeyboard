@@ -75,7 +75,8 @@ enum class MidiCommand {
     speed_range,
     mute,
     presentationMode,
-    fontSize
+    fontSize,
+    imgNegative
 };
 
 
@@ -166,6 +167,8 @@ class Config {
           {"mute", MidiCommand::mute},
           {"presentationMode", MidiCommand::presentationMode},
           {"fontSize", MidiCommand::fontSize},
+          {"imgNegative", MidiCommand::imgNegative},
+
 
 
 

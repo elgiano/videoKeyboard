@@ -24,6 +24,7 @@ bool MovieContainer::load(std::string name){
         imagePlayer = new ImagePlayer();
         bool success = imagePlayer->load(name);
         if(success) contentType = MovieType::image;
+        else delete imagePlayer;
         return success;
     }
     
@@ -155,6 +156,8 @@ void  MovieContainer::update(){
         return hapMovie->update();
     }else if(contentType==MovieType::txt){
         return fontPlayer->update();
+    }else if(contentType==MovieType::image){
+        return imagePlayer->update();
     }
 };
 
@@ -167,5 +170,11 @@ void  MovieContainer::setColor(ofColor col){
 void  MovieContainer::setFontScale(float scale){
     if(contentType==MovieType::txt){
         return fontPlayer->setFontScale(scale);
+    }
+};
+
+void  MovieContainer::setImageNegative(bool negative){
+    if(contentType==MovieType::image){
+        return imagePlayer->inverted = negative;
     }
 };

@@ -10,8 +10,8 @@
 #include "movieContainer.hpp"
 #include "config.h"
 
-#define MAX_VIDEOS 1056
-#define MAX_SETS 12
+#define MAX_VIDEOS 968
+#define MAX_SETS 11
 
 #define MAX_CAPTURE 2
 #define N_LAYOUTS 6 // fullscreen, double v, double h, triple, tryptich, quad
@@ -144,6 +144,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
         void panic();
     
     void setFontScale(float scale);
+    void setImgNegative(bool negative);
 
     float harmonicLoopDur(int key);
 

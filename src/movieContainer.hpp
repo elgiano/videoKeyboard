@@ -59,6 +59,7 @@ class MovieContainer {
     virtual void                    setColor(ofColor col);
     
     void                        setFontScale(float scale);
+    void                        setImageNegative(bool negative);
 
     
         /*

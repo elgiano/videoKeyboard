@@ -775,10 +775,16 @@ int ofApp::setNumberFromKey(int key){
 // ### CONTROL ###
 
 void ofApp::setFontScale(float scale){
-    sustain=0 ;
     for(int i=0;i<MAX_VIDEOS;i++){
         if(movie[i].contentType == MovieType::txt){
             movie[i].setFontScale(scale);
+        }
+    }
+}
+void ofApp::setImgNegative(bool negative){
+    for(int i=0;i<MAX_VIDEOS;i++){
+        if(movie[i].contentType == MovieType::image){
+            movie[i].setImageNegative(negative);
         }
     }
 }

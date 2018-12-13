@@ -26,16 +26,19 @@ public:
     
     void play();
     void stop();
+    void update();
     
     float getWidth() const;
     float getHeight() const;
-
+    bool inverted=false;
     
     bool  isPlaying() const;
     
 private:
     ofImage image;
     bool playing;
+    bool isInverted=false;
+    void invert();
     
 };
 
