@@ -119,8 +119,8 @@ void ofApp::initVideoVariables(int key){
   stutterStart[key] = 0;
   stutterDur[key] = 0.1;
   movie[key].setLoopState(loopState);
-  soundFader[key] = new SoundFader();
-  soundFader[key]->setup(this,key);
+  //soundFader[key] = new SoundFader();
+  //soundFader[key]->setup(this,key);
 }
 
 std::map<string,float> ofApp::readRms(string path){
@@ -371,12 +371,7 @@ void ofApp::drawVideoInLayout(int movieN){
         //h = movie[movieN].getHeight();
     }
 
-    
-    
-  
-    
-    
-    
+
     if(movie[movieN].contentType==MovieType::txt){
         ofEnableAlphaBlending();
         if(blending_multiply){
@@ -693,7 +688,7 @@ void ofApp::update(){
   }
 }
 
-void ofApp::soundFades(int i){
+/*void ofApp::soundFades(int i){
   // sound fade in
     float now = ofGetElapsedTimef();
   float vol = 1;
@@ -707,11 +702,7 @@ void ofApp::soundFades(int i){
       vol = pow(vol,2);
       //cout << "pow: " << vol << endl;
       //vol = vol/sound_fadeTime;
-  }/*else if(movie[i].getPosition()*movie[i].getDuration()<sound_fadeTime){
-    vol = movie[i].getPosition()*movie[i].getDuration()/sound_fadeTime;
-    //cout << "pct: " << vol << endl;
-    vol = pow(vol,2);
-  }*/
+  }
   // sound fade_out
   if(fo_start[i]>0){
       if(fade_out<=sound_fadeTime){
@@ -736,7 +727,7 @@ void ofApp::soundFades(int i){
   //cout << "sf"<<i<<" vol:"<<vol<<endl;
   setVideoVolume(i,vol);
 
-}
+}*/
 
 void ofApp::setVideoVolume(int key, float vol){
     if(!mute){
@@ -810,7 +801,7 @@ void ofApp::playVideo(int key, float vel){
     // update dynamics and stop fade_out
       dyn[key] = vel;
       videoVolume[key] = dynIsVolume ? vel : 1.0;
-      //setVideoVolume(key,1.0);
+      setVideoVolume(key,1.0);
       fo_start[key] = 0;
       fi_start[key] = ofGetElapsedTimef();
 
@@ -823,7 +814,7 @@ void ofApp::playVideo(int key, float vel){
         
       active_videos[key] = true;
       reset_videos[key] = true;
-        soundFader[key]->startThread();
+        //soundFader[key]->startThread();
         //if(!mute){soundFader[key]->startThread();}{setVideoVolume(key,0);};
       n_activeVideos++;
         
@@ -849,7 +840,7 @@ void ofApp::playVideo(int key, float vel){
 
 void ofApp::deactivateVideo(int key){
   fo_start[key] = 0.0;
-  soundFader[key]->stopThread();
+  //soundFader[key]->stopThread();
   active_videos[key] = false;
 
   //cout << "deactivating " << ofToString(key) << endl;

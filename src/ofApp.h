@@ -17,7 +17,7 @@
 #define N_LAYOUTS 6 // fullscreen, double v, double h, triple, tryptich, quad
 #define MAX_LAYOUTPOS 4
 
-class SoundFader;
+//class SoundFader;
 
 class ofApp : public ofBaseApp, public ofxMidiListener{
 
@@ -191,7 +191,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
     bool sostenutoFreeze_videos[MAX_VIDEOS];
     bool ribattutoSpeed = false;
 
-		SoundFader* soundFader[MAX_VIDEOS];
+		//SoundFader* soundFader[MAX_VIDEOS];
 
 
 		float fo_start[MAX_VIDEOS];
@@ -238,7 +238,7 @@ class ofApp : public ofBaseApp, public ofxMidiListener{
 		//std::vector<int[N_LAYOUTS]> layoutConf;
 };
 
-class SoundFader : public ofThread {
+/*class SoundFader : public ofThread {
 
 public:
   int deltams = 1;
@@ -267,4 +267,4 @@ public:
 private:
   ofApp *ctrl;
   int movieN;
-};
+};*/
